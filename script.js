@@ -1,9 +1,16 @@
-let scene, camera, renderer, controls, cube;
+let scene, camera, renderer, controls;
+let perspectiveCamera, orthographicCamera;
+let isCurr2D = false;
+let gridHelper;
+
 const toggle = document.getElementById('2or3-toggle');
+toggle.checked = true;
+
 function createBackground(){
     const boxSize = 20;
-    const axisThickness = 0.2;
+    const axisThickness = 0.1;
     const axisLength = boxSize * 1.2;
+
 
     const groundGeometry = new THREE.PlaneGeometry(boxSize, boxSize);
     const groundMaterial = new THREE.MeshBasicMaterial({visible: false});
@@ -31,25 +38,37 @@ function createBackground(){
     const zAxis = createAxis(0x007ff, {x:Math.PI / 2, y:0, z: 0}, {x:0, y:0, z:axisLength / 2});
     scene.add(zAxis);
 
-    
-    const boxGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-    const boxEdges = new THREE.EdgesGeometry(boxGeo);
-    const boxMaterial = new THREE.LineBasicMaterial({color: 0x837bbb, });
-    const box = new THREE.LineSegments(boxEdges, boxMaterial);
-    box.position.set(boxSize / 2, boxSize / 2, boxSize / 2);
-    scene.add(box);
-
-    const planeGeo = new THREE.PlaneGeometry(boxSize, 20);
+    /** I dont know why I dont want to remove this, so yea just leave it here if I need it 
+     * some other time 
+     * 
+     * const planeGeo = new THREE.PlaneGeometry(boxSize, 20);
     const planeMat = new THREE.MeshBasicMaterial({color: 0x434081, side: THREE.DoubleSide});
     const plane = new THREE.Mesh(planeGeo, planeMat);
     plane.rotation.x = -Math.PI / 2;
     plane.position.set(boxSize / 2, 0, boxSize / 2);
     scene.add(plane);
+     */
     
-    
+
+    // Initializing the gridHelper for the 3d view
     const gridHelper = new THREE.GridHelper(boxSize, 20, 0xa39ce3, 0xa39ce3);
     gridHelper.position.set(boxSize / 2, 0, boxSize / 2);
     scene.add(gridHelper);
+
+    // Toggle switch between 3d and 2D
+    const toggle = document.getElementById('2or3-toggle');
+    toggle.addEventListener('change', (e) => {
+        isCurr2D = e.target.checked === false;
+        if(isCurr2D){
+            gridHelper.rotation.x = Math.PI / 2;
+            gridHelper.position.set(boxSize / 2, boxSize / 2, 0);
+        }
+        else{
+            gridHelper.rotation.x = 0;
+            gridHelper.position.set(boxSize / 2, 0, boxSize / 2);
+        }
+    
+    })
 }
 
 function setupThreeScene(){
@@ -76,6 +95,18 @@ function setupThreeScene(){
     document.body.appendChild(renderer.domElement);
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    // Initialize controls for 3d views
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.rotateSpeed = 0.8;
+    controls.panSpeed = 0.8;
+    controls.minDistance = 5;
+    controls.maxDistance = 50;
+    controls.maxPolarAngle = Math.PI / 1.5;
+    controls.target.set(10, 5, 10);
+    controls.screenSpacePanning = true;
+    controls.enableKeys = false;
 
     const toggle = document.getElementById('2or3-toggle');
     toggle.addEventListener('change', (e) => {
@@ -110,14 +141,6 @@ function setupThreeScene(){
         }
     });
 
-    
-    
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({color: 0xff0000});
-    cube = new THREE.Mesh(geometry, material);
-
-    scene.add(cube);
-
     toggle.addEventListener('change', (e) => {
         if(e.target.checked){
             controls.enableRotate = true;
@@ -133,24 +156,58 @@ function setupThreeScene(){
     });
 
     window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
+        const aspect = window.innerWidth / window.innerHeight;
+        perspectiveCamera.aspect = aspect;
+        perspectiveCamera.updateProjectionMatrix();
+
+        // Orthographic camera
+        const d = 15;
+        orthographicCamera.left = -d * aspect;
+        orthographicCamera.right = d * aspect;
+        orthographicCamera.top = d;
+        orthographicCamera.bottom = -d;
+        orthographicCamera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
     
     animate();
 }
+function setupLights(){
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 20, 10);
+    scene.add(directionalLight);
+
+    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+    directionalLight2.position.set(-10, 10, -10);
+    scene.add(directionalLight2);
+}
+function interactiveObjects(){
+    const loader = new THREE.GLTFLoader();
+    loader.load('cannon.glb', function(gltf){
+        cannonModel = gltf.scene;
+        cannonModel.position.set(0, 1, 0);
+        cannonModel.scale.set(1, 1, 1);
+        cannonModel.rotation.y = Math.PI / 4;
+        cannonModel.traverse((child) => {
+            if(child.isMesh){
+                child.material.color.set(0xffffff);
+            }
+        });
+
+        scene.add(cannonModel);
+    });
+}
 
 function animate(){
     requestAnimationFrame(animate);
-    
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
-    
     controls.update();
-
     renderer.render(scene, camera);
 }
 
 setupThreeScene();
 createBackground();
+interactiveObjects();
+setupLights();
