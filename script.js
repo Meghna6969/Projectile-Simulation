@@ -2,12 +2,49 @@ let scene, camera, renderer, controls;
 let perspectiveCamera, orthographicCamera;
 let isCurr2D = false;
 let gridHelper;
+let cannonModel;
 
 const toggle = document.getElementById('2or3-toggle');
 toggle.checked = true;
 
+const velocityInput = document.getElementById('initial-velocity');
+const velocitySlider = document.getElementById('velocity-slider');
+const angleInput = document.getElementById('launch-angle');
+const angleSlider = document.getElementById('angle-slider');
+const heightInput = document.getElementById('height');
+const heightSlider = document.getElementById('height-slider');
+
+velocitySlider.addEventListener('input', (e) => {
+    velocityInput.value = e.target.value;
+});
+velocityInput.addEventListener('input', (e) =>{
+    velocitySlider.value = e.target.value;
+});
+
+angleSlider.addEventListener('input', (e) =>{
+    angleInput.value = e.target.value;
+});
+angleInput.addEventListener('input', (e) => {
+    angleSlider.value = e.target.value;
+});
+
+heightSlider.addEventListener('input', (e) => {
+    heightInput.value = e.target.value;
+    if(cannonModel){
+        cannonModel.position.y = parseFloat(e.target.value) + 1;
+    }
+});
+heightInput.addEventListener('input', (e) => {
+    heightSlider.value = e.target.value;
+    if(cannonModel){
+        cannonModel.position.y = parseFloat(e.target.value) + 1;
+    }
+});
+
+
+
 function createBackground(){
-    const boxSize = 20;
+    const boxSize = 40;
     const axisThickness = 0.1;
     const axisLength = boxSize * 1.2;
 
@@ -76,11 +113,11 @@ function setupThreeScene(){
     scene.background = new THREE.Color(0x140f2e);
 
     const aspect = window.innerWidth / innerHeight;
-    const d = 15;
+    const d = 25;
    
     // 3D camera
-    perspectiveCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    perspectiveCamera.position.set(15, 15, 15);
+    perspectiveCamera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+    perspectiveCamera.position.set(20, 10, 20);
 
     // 2D Camera (Orthographic Camera)
     orthographicCamera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 1000);
@@ -123,7 +160,7 @@ function setupThreeScene(){
     controls.maxDistance = 50;
     controls.screenSpacePanning = true;
     controls.enableKeys = false;
-            camera.position.set(10, 10, 30);
+            camera.position.set(40, 5, 20);
             controls.target.set(10, 10, 0);
         }else{
             camera = perspectiveCamera;
@@ -135,6 +172,7 @@ function setupThreeScene(){
     controls.minDistance = 5;
     controls.maxDistance = 50;
     controls.maxPolarAngle = Math.PI / 1.5;
+    
     controls.target.set(10, 5, 10);
     controls.screenSpacePanning = true;
     controls.enableKeys = false;
@@ -144,13 +182,12 @@ function setupThreeScene(){
     toggle.addEventListener('change', (e) => {
         if(e.target.checked){
             controls.enableRotate = true;
-
-            camera.position.set(15, 15, 15);
-            controls.target.set(10, 5, 10);
+            camera.position.set(15, 15, 25);
+            controls.target.set(5, 5, 10);
         }else{
             controls.enableRotate = false;
-            camera.position.set(10, 10, 30);
-            controls.target.set(10, 10, 0);
+            camera.position.set(10, 20, 30);
+            controls.target.set(10, 20, 0);
         }
         controls.update();
     });
@@ -161,7 +198,7 @@ function setupThreeScene(){
         perspectiveCamera.updateProjectionMatrix();
 
         // Orthographic camera
-        const d = 15;
+        const d = 25;
         orthographicCamera.left = -d * aspect;
         orthographicCamera.right = d * aspect;
         orthographicCamera.top = d;
@@ -198,6 +235,12 @@ function interactiveObjects(){
         });
 
         scene.add(cannonModel);
+
+        const heightInput = document.getElementById('height');
+        heightInput.addEventListener('input', (e) => {
+            const height = parseFloat(e.target.value);
+            cannonModel.position.y = height + 1;
+        })
     });
 }
 
@@ -206,6 +249,7 @@ function animate(){
     controls.update();
     renderer.render(scene, camera);
 }
+
 
 setupThreeScene();
 createBackground();

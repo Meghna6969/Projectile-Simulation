@@ -12,13 +12,12 @@
 </head>
 <body>
     
-    <div class="side-panel">
-        <div class="panel-title">
+    <div class="control-panel">
+        <div class="panel-header">
             <h2>Projectile Motion Simulator</h2>
             <p>Visualize projectile motion both in 2d and 3d</p>
         </div>
-    </div>
-    <div class="control-section">
+        <div class="control-section">
         <div class="section-title"> View Mode</div>
 <div class = "toggle-container">
         <label for="2or3-toggle" class="toggle-label">2D</label>
@@ -35,24 +34,28 @@
                 <input type="number" id="initial-velocity" value="20" min="0" step="1">
                 <span>m/s</span>
             </div>
+             <input type="range" id="velocity-slider" class="slider" min="0" max="100" value="0" step="0.5">
         </div>
         <div class="input-group">
             <label for="launch-angle">Launch Angle</label>
             <div class="input-with-unit">
-                <input type="number" id="launch-angle" value="45" min="0" max="90" step="1">
+                <input type="number" id="launch-angle" value="0" min="0" max="90" step="1">
                 <span>°</span>
             </div>
+            <input type="range" id="angle-slider" class="slider" min="0" max="90" value="0" step="0.5">
         </div>
         <div class="input-group">
             <label for="height">Initial Height</label>
             <div class="input-with-unit">
-                <input type="number" id="height" value="0" min="0" max="100" step="0.5">
+                <input type="number" id="height" value="0" min="0" max="45" step="0.5">
                 <span>m</span>
             </div>
+            <input type="range" id="height-slider" class="slider" min="0" max="45" value="0" step="0.5">
         </div>
     </div>
-    <div class="control-section">
+     <div class="control-section">
         <button class="shoot-button" id="shoot-btn">Launch Projectile</button>
+    </div>
     </div>
     <script src="script.js"></script>
 </body>

@@ -5,12 +5,37 @@ body {
 canvas{
     display: block;
 }
+.slider{
+    width: 100%;
+    margin-top: 8px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(67, 64, 129, 0.5);
+    outline: none;
+    cursor: pointer;
+}
+.slider::-webkit-slider-thumb{
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #9Ac;
+    cursor: pointer;
+}
+.slider::-moz-range-thumb{
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #9Ac;
+    cursor: pointer;
+    border: none;
+}
 .control-panel{
     position: absolute;
     top: 20px;
     left: 20px;
     z-index: 100;
-    background: rgba(20, 15, 46, 0.95);
+    background: rgba(3, 3, 5, 0.95);
     padding: 20px;
     border-radius: 12px;
     color:white;
@@ -93,6 +118,7 @@ toggle-in:checked {
 .input-group label{
     display: block;
     font-size: 13px;
+    font-weight: bold;
     margin-bottom:6px;
     color: #a39ce3;
 }
@@ -102,7 +128,8 @@ toggle-in:checked {
     border: 1px solid #434081;
     border-radius: 6px;
     background: rgba(67, 64, 129, 0.3);
-    color: black;
+    color: white;
+    font-weight: bold;
     font-size: 14px;
     box-sizing: border-box;
 }
@@ -125,8 +152,8 @@ toggle-in:checked {
 .shoot-button {
     width: 100%;
     padding: 12px;
-    background: #9Ac;
-    color: #140f2e;
+    background: #434081;
+    color: white;
     border: none;
     border-radius: 8px;
     font-size: 16px;
