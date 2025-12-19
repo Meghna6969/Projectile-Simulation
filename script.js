@@ -4,15 +4,31 @@ let isCurr2D = false;
 let gridHelper;
 let cannonModel;
 
+// Physics has started :(
+let world;
+let physicsBodies = [];
+let physicsMeshes = [];
+
+
+// Gimbal lock and respectivity of the rotation
+let cannonRotationX = 0;
+let cannonRotationY = 0;
+let cannonRotationZ = 0;
+
 const toggle = document.getElementById('2or3-toggle');
 toggle.checked = true;
 
 const velocityInput = document.getElementById('initial-velocity');
 const velocitySlider = document.getElementById('velocity-slider');
-const angleInput = document.getElementById('launch-angle');
-const angleSlider = document.getElementById('angle-slider');
+const angleX = document.getElementById('angle-x');
+const angleXSlider = document.getElementById('angle-x-slider');
+const angleY = document.getElementById('angle-y');
+const angleYSlider = document.getElementById('angle-y-slider');
+const angleZ = document.getElementById('angle-z');
+const angleZSlider = document.getElementById('angle-z-slider');
 const heightInput = document.getElementById('height');
 const heightSlider = document.getElementById('height-slider');
+const angleXGroup = document.getElementById('angle-x-group');
 
 velocitySlider.addEventListener('input', (e) => {
     velocityInput.value = e.target.value;
@@ -21,11 +37,37 @@ velocityInput.addEventListener('input', (e) =>{
     velocitySlider.value = e.target.value;
 });
 
-angleSlider.addEventListener('input', (e) =>{
-    angleInput.value = e.target.value;
+angleXSlider.addEventListener('input', (e) =>{
+    angleX.value = e.target.value;
+    cannonRotationX = parseFloat(e.target.value) * Math.PI / 180 ;
+    updateCannonRotationRightly();
 });
-angleInput.addEventListener('input', (e) => {
-    angleSlider.value = e.target.value;
+angleX.addEventListener('input', (e) => {
+    angleXSlider.value = e.target.value;
+    cannonRotationX = parseFloat(e.target.value) * Math.PI / 180 ;
+    updateCannonRotationRightly();
+});
+
+angleYSlider.addEventListener('input', (e) =>{
+    angleY.value = e.target.value;
+    cannonRotationY = parseFloat(e.target.value) * Math.PI / 180 ;
+    updateCannonRotationRightly();
+});
+angleY.addEventListener('input', (e) => {
+    angleYSlider.value = e.target.value;
+    cannonRotationY = parseFloat(e.target.value) * Math.PI / 180 ;
+    updateCannonRotationRightly();
+});
+
+angleZSlider.addEventListener('input', (e) =>{
+    angleZ.value = e.target.value;
+    cannonRotationZ = parseFloat(e.target.value) * Math.PI / 180 ;
+    updateCannonRotationRightly();
+});
+angleZ.addEventListener('input', (e) => {
+    angleZSlider.value = e.target.value;
+    cannonRotationZ = parseFloat(e.target.value) * Math.PI / 180 ; 
+    updateCannonRotationRightly();
 });
 
 heightSlider.addEventListener('input', (e) => {
@@ -38,10 +80,83 @@ heightInput.addEventListener('input', (e) => {
     heightSlider.value = e.target.value;
     if(cannonModel){
         cannonModel.position.y = parseFloat(e.target.value) + 1;
+        
     }
 });
+function setupPhysics(){
+    world = new CANNON.World();
+    world.gravity.set(0, -9.82, 0);
+    world.broadphase = new CANNON.NaiveBroadphase();
+    world.solver.iterations = 10;
 
+    const groundShape = new CANNON.Plane();
+    const groundBody = new CANNON.Body({mass : 0});
+    groundBody.addShape(groundShape);
+    groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+    world.addBody(groundBody);
+}
+function addPhysicsBox(x, y, z, width, height, depth, color = 0xff0000){
+    const geometry = new THREE.BoxGeometry(width, height, depth);
+    const material = new THREE.MeshStandardMaterial({ color: 0xff0000});
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
 
+    const shape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2));
+    const body = new CANNON.Body({
+        mass: 1,
+        shape: shape,
+        position: new CANNON.Vec3(x, y, z)
+    });
+    world.addBody(body);
+
+    physicsBodies.push(body);
+    physicsMeshes.push(mesh);
+
+    return {mesh, body};
+}
+function updatePhysics(){
+    world.step(1/60);
+    for(let i = 0; i < physicsBodies.length; i++){
+        physicsMeshes[i].position.copy(physicsBodies[i].position);
+        physicsMeshes[i].quaternion.copy(physicsBodies[i].quaternion);
+    }
+}
+function updateRotationLocks(){
+    if(isCurr2D){
+        //2d Mode locking X and Y
+        cannonRotationY = Math.PI;
+        cannonRotationX = 0;
+        angleY.value = 180;
+        angleYSlider.value = 180;
+        angleX.value = 0;
+        angleXSlider.value = 0;
+
+        angleY.disabled = true;
+        angleYSlider.disabled = true;
+        angleX.disabled = true;
+        angleXSlider.disabled = true;
+
+        
+    }
+    else{
+            angleY.disabled = false;
+            angleYSlider.disabled = false;
+            angleX.disabled = false;
+            angleXSlider.disabled = false;
+
+            if(angleXGroup){
+                angleXGroup.style.display = 'block';
+            }
+        }
+}
+
+function updateCannonRotationRightly(){
+    if(cannonModel){
+        const euler = new THREE.Euler(cannonRotationX, cannonRotationY, cannonRotationZ, 'XYZ');
+        cannonModel.rotation.copy(euler);
+    }
+}
 
 function createBackground(){
     const boxSize = 40;
@@ -96,6 +211,7 @@ function createBackground(){
     const toggle = document.getElementById('2or3-toggle');
     toggle.addEventListener('change', (e) => {
         isCurr2D = e.target.checked === false;
+        updateRotationLocks();
         if(isCurr2D){
             gridHelper.rotation.x = Math.PI / 2;
             gridHelper.position.set(boxSize / 2, boxSize / 2, 0);
@@ -246,11 +362,13 @@ function interactiveObjects(){
 
 function animate(){
     requestAnimationFrame(animate);
+    updatePhysics();
     controls.update();
     renderer.render(scene, camera);
 }
-
-
+setupPhysics();
+addPhysicsBox(5, 5, 5, 1, 1, 1, 0xff0000);
+updateRotationLocks();
 setupThreeScene();
 createBackground();
 interactiveObjects();
