@@ -4,6 +4,11 @@ let isCurr2D = false;
 let gridHelper;
 let cannonModel;
 
+let activeProjectile = null;
+let projectileStartTime = 0;
+let maxHeight = 0;
+let dataPoints = [];
+
 // Physics has started :(
 let world;
 let physicsBodies = [];
@@ -29,6 +34,9 @@ const angleZSlider = document.getElementById('angle-z-slider');
 const heightInput = document.getElementById('height');
 const heightSlider = document.getElementById('height-slider');
 const angleXGroup = document.getElementById('angle-x-group');
+const launchButton = document.getElementById('shoot-btn');
+
+launchButton.addEventListener('click', launchProjectile);
 
 velocitySlider.addEventListener('input', (e) => {
     velocityInput.value = e.target.value;
@@ -97,14 +105,14 @@ function setupPhysics(){
 }
 function addPhysicsBox(x, y, z, width, height, depth, color = 0xff0000){
     const geometry = new THREE.BoxGeometry(width, height, depth);
-    const material = new THREE.MeshStandardMaterial({ color: 0xff0000});
+    const material = new THREE.MeshStandardMaterial({ color: color});
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(x, y, z);
     scene.add(mesh);
 
     const shape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2));
     const body = new CANNON.Body({
-        mass: 1,
+        mass: 10,
         shape: shape,
         position: new CANNON.Vec3(x, y, z)
     });
@@ -153,7 +161,7 @@ function updateRotationLocks(){
 
 function updateCannonRotationRightly(){
     if(cannonModel){
-        const euler = new THREE.Euler(cannonRotationX, cannonRotationY, cannonRotationZ, 'XYZ');
+        const euler = new THREE.Euler(cannonRotationX, cannonRotationY, cannonRotationZ, 'YXZ');
         cannonModel.rotation.copy(euler);
     }
 }
@@ -343,7 +351,6 @@ function interactiveObjects(){
         cannonModel = gltf.scene;
         cannonModel.position.set(0, 1, 0);
         cannonModel.scale.set(1, 1, 1);
-        cannonModel.rotation.y = Math.PI / 4;
         cannonModel.traverse((child) => {
             if(child.isMesh){
                 child.material.color.set(0xffffff);
@@ -359,17 +366,97 @@ function interactiveObjects(){
         })
     });
 }
+function launchProjectile(){
+    const v0 = parseFloat(velocityInput.value);
+    const h0 = parseFloat(heightInput.value) + 1;
 
+    const radius = 0.5;
+    const direction = new THREE.Vector3(0, 1, 0);
+    const euler = new THREE.Euler(cannonRotationX, cannonRotationY, cannonRotationZ, 'YXZ');
+    direction.applyEuler(euler);
+    direction.normalize();
+
+    const barrelLength = 1;
+    const startPos = new THREE.Vector3(0, h0, 0);
+    startPos.add(direction.clone().multiplyScalar(barrelLength));
+
+    const shape = new CANNON.Sphere(radius);
+    const body = new CANNON.Body({
+        mass: 5,
+        shape: shape,
+        linearDamping: 0.1,
+        angluarDamping: 0.1,
+        position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z)
+    });
+
+    //body.position.set(0, h0, 0);
+    const velocityVector = direction.multiplyScalar(v0);
+    body.velocity.set(velocityVector.x, velocityVector.y, velocityVector.z);
+
+    // Instantiating object
+    world.addBody(body);
+    physicsBodies.push(body);
+
+    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+    const material = new THREE.MeshStandardMaterial({color: 0xffff00});
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(body.position); // Might change it later so its closer to the nozzle
+
+    activeProjectile = physicsBodies.length - 1;
+    projectileStartTime = Date.now();
+    maxHeight = h0;
+    dataPoints = [];
+    scene.add(mesh);
+    physicsMeshes.push(mesh);
+}
 function animate(){
     requestAnimationFrame(animate);
     updatePhysics();
+    updateDetailsPanel();
     controls.update();
     renderer.render(scene, camera);
 }
+function updateDetailsPanel(){
+    if(activeProjectile === null) return;
+    const body = physicsBodies[activeProjectile];
+    if(!body) return;
+
+    const currentHeight = body.position.y;
+    const elapsedTime = (Date.now() - projectileStartTime) / 1000;
+    document.getElementById('current-time').textContent = elapsedTime.toFixed(2) + ' s';
+    document.getElementById('current-height').textContent = currentHeight.toFixed(2) + ' m';
+
+    if(currentHeight > maxHeight){
+        maxHeight = currentHeight;
+        document.getElementById('max-height').textContent = maxHeight.toFixed(2) + ' m';
+    }
+    if(dataPoints.length === 0 || elapsedTime - dataPoints[dataPoints.length - 1].time >= 0.1){
+        dataPoints.push({
+            time:elapsedTime,
+            height: currentHeight,
+            x: body.position.x,
+            z: body.position.z
+        });
+    }
+    if(currentHeight <= 0.5){
+        activeProjectile = null;
+    }
+}
+function updateDataTable(){
+    const tbody = document.getElementById('data-table-body');
+    tbody.innerHTML = '';
+    dataPoints.forEach(points => {
+        const row = tbody.inserRow();
+        row.insertCell(0).textContent = points.time.toFixed(2);
+        row.insertCell(1).textContent = points.height.toFixed(2);
+        row.insertCell(2).textContent = points.x.toFixed(2);
+        row.insertCell(3).textContent = points.z.toFixed(2);
+    });
+}
 setupPhysics();
-addPhysicsBox(5, 5, 5, 1, 1, 1, 0xff0000);
 updateRotationLocks();
 setupThreeScene();
 createBackground();
 interactiveObjects();
 setupLights();
+addPhysicsBox(30, 20, 30, 5, 5, 5, 0xff0000);

@@ -32,10 +32,10 @@
         <div class="input-group">
             <label for="initial-velocity">Initial velocity</label>
             <div class="input-with-unit">
-                <input type="number" id="initial-velocity" value="20" min="0" step="1">
+                <input type="number" id="initial-velocity" value="20" min="0" max="50" step="1">
                 <span>m/s</span>
             </div>
-             <input type="range" id="velocity-slider" class="slider" min="0" max="100" value="0" step="0.5">
+             <input type="range" id="velocity-slider" class="slider" min="0" max="50" value="0" step="0.5">
         </div>
         <div class="input-group" id="angle-x-group">
             <label for="angle-x">Angle X</label>
@@ -73,6 +73,40 @@
      <div class="control-section">
         <button class="shoot-button" id="shoot-btn">Launch Projectile</button>
     </div>
+    </div>
+    <div class="details-panel">
+        <div class="details-header">
+            <div class="details-item">
+                <label>Time</label>
+                <span id="current-time">0.00 s</span>
+            </div>
+            <div class="detail-item">
+                <label>Height</label>
+                <span id="current-height">0.00 m</span>
+            </div>
+            <div class="detail-item">
+                <label>Max Height</label>
+                <span id="max-height">0.00 m</span>
+            </div>
+            <div class="detail-item">
+                <label>Gravity</label>
+                <span id="gravity">9.82 m/s²</span>
+            </div>
+        </div>
+        <div class="data-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time (s)</th>
+                        <th>Height (m)</th>
+                        <th>X Position (m)</th>
+                        <th>Z Position (m)</th>
+                    </tr>
+                </thead>
+                <tbody id="data-table-body">
+                </tbody>
+            </table>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
