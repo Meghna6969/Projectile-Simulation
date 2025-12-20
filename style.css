@@ -259,3 +259,12 @@ toggle-in:checked {
     background: #9Ac;
     border-radius: 3px;
 }
+.air-resistence-input{
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+.air-resistence-input input{
+    width: 30px;
+    height: 30px;
+}

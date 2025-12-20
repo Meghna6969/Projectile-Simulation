@@ -4,12 +4,29 @@ let isCurr2D = false;
 let gridHelper;
 let cannonModel;
 
-let gravity = 9.82;
+// Projectile launch paramters that change for every launch
+let gravity = 9.82; // Doesnot change for each ball but for the whole scene
+let mass = 2; // Per ball basis also initial mass of the object
+
+// This thing is stupid
+let airResistent = false; // Doesnot change per ball basis changes for all balls
+// variables
+const AIR_DENSITY = 1.225;
+const DRAG_COEFFICIENT = 0.47;
+const CROSS_SECTIONAL_AREA = Math.PI * Math.pow(0.5, 2);
+
+// --Important-- Cant change the initial orintation of the cannon since its going to mess the offset of the nozzle 
+// AND MAKES SURE CANNON RANDOMLY SHOOTS THE BALL IN RANDOM DIRECTIONS
+// Please dont change while developing or imma eat you
+
+// Next stupid ahh bug to fix is the bug of colors which kinda gets messed up with multiple repeatative shoots of the projectile
 
 let activeProjectile = null;
 let projectileStartTime = 0;
 let maxHeight = 0;
 let dataPoints = [];
+
+
 
 let trajectoryLines = [];
 const MAX_TRAJECTORY_LINES = 3;
@@ -42,8 +59,12 @@ const angleXGroup = document.getElementById('angle-x-group');
 const launchButton = document.getElementById('shoot-btn');
 const gravityInput = document.getElementById('gravity');
 const gravitySlider = document.getElementById('gravity-slider');
+const massInput = document.getElementById('mass');
+const massSlider = document.getElementById('mass-slider');
+const airResis = document.getElementById('airResistence');
 
 launchButton.addEventListener('click', launchProjectile);
+
 
 velocitySlider.addEventListener('input', (e) => {
     velocityInput.value = e.target.value;
@@ -112,6 +133,26 @@ gravityInput.addEventListener('input', (e) => {
     document.getElementById('gravity').textContent = gravity.toFixed(2) + ' m/s²';
 });
 
+massSlider.addEventListener('input', (e) =>{
+    massInput.value = e.target.value;
+    mass = parseFloat(e.target.value);
+});
+massInput.addEventListener('input', (e) => {
+    massSlider.value = e.target.value;
+    mass = parseFloat(e.target.value);
+});
+airResis.addEventListener('input', (e) =>{
+    airResistent = e.target.checked;
+    if(airResistent){
+        enableAirResistence();
+        console.log("Air resistent is turn on");
+    }
+    else{
+        console.log("Air Resistent is turned off");
+    }
+});
+
+
 function setupPhysics(){
     world = new CANNON.World();
     world.gravity.set(0, -gravity, 0);
@@ -150,6 +191,27 @@ function updatePhysics(){
         physicsMeshes[i].position.copy(physicsBodies[i].position);
         physicsMeshes[i].quaternion.copy(physicsBodies[i].quaternion);
     }
+
+    // Adding drag boutta suck hard
+    // Drag equation straight from google: FD = 0.5 * rho * drag_coefficient * A * v^2;
+    // We could also do this with linear damping (which almost physics accurate but still not physically accurate and thats also going to be
+    // per ball basis so rather than that just do it for the whole scene
+    // Apparently Drag gotta be updated every second for it to work so we going to run a simulation loop later in the code
+    physicsBodies.forEach(body => {
+        const velocity = body.velocity(); // error with this line something with velocity()
+        const speed = velocity.length();
+        if(speed > 0.01){
+            // Just so we dont apply drag for statinary objects
+            //const AIR_DENSITY = 1.225;
+            //const DRAG_COEFFICIENT = 0.47;
+            //const CROSS_SECTIONAL_AREA = Math.PI * Math.pow(0.5, 2);
+            const dragMagnitude = 0.5 * AIR_DENSITY * DRAG_COEFFICIENT * CROSS_SECTIONAL_AREA * speed * speed;
+            const dragForce = velocity.clone();
+            dragForce.normalize();
+            dragForce.scale(-dragMagnitude);
+            body.applyForce(dragForce, body.position);
+        }
+    });
 }
 function updateRotationLocks(){
     if(isCurr2D){
@@ -165,8 +227,6 @@ function updateRotationLocks(){
         angleYSlider.disabled = true;
         angleX.disabled = true;
         angleXSlider.disabled = true;
-
-        
     }
     else{
             angleY.disabled = false;
@@ -391,7 +451,7 @@ function launchProjectile(){
     const v0 = parseFloat(velocityInput.value);
     const h0 = parseFloat(heightInput.value) + 1;
 
-    const radius = 0.5;
+    const radius = 0.5 * mass * 0.1;
     const direction = new THREE.Vector3(0, 1, 0);
     const euler = new THREE.Euler(cannonRotationX, cannonRotationY, cannonRotationZ, 'YXZ');
     direction.applyEuler(euler);
@@ -403,7 +463,7 @@ function launchProjectile(){
 
     const shape = new CANNON.Sphere(radius);
     const body = new CANNON.Body({
-        mass: 5,
+        mass: mass,
         shape: shape,
         linearDamping: 0.1,
         angluarDamping: 0.1,
@@ -536,3 +596,4 @@ createBackground();
 interactiveObjects();
 setupLights();
 addPhysicsBox(30, 20, 30, 5, 5, 5, 0xff0000);
+addPhysicsBox(10, 15, 30, 3, 3, 3, 0xfcd12a);
