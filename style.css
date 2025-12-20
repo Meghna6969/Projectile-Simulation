@@ -6,8 +6,8 @@ canvas{
     display: block;
 }
 .slider{
-    width: 100%;
-    margin-top: 8px;
+    flex: 1;
+    margin-top: 0;
     height: 6px;
     border-radius: 3px;
     background: rgba(67, 64, 129, 0.5);
@@ -122,6 +122,11 @@ toggle-in:checked {
     margin-bottom:6px;
     color: #a39ce3;
 }
+.input-controls{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 .input-group input {
     width: 100%;
     padding: 8px;
@@ -141,17 +146,27 @@ toggle-in:checked {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 80px;
 }
 .input-group input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 .input-with-unit input {
-    flex: 1;
+    width: 60px;
+    padding: 6px 8px;
+    border: 1px solid #434081;
+    border-radius: 6px;
+    background:rgba(67, 64, 129, 0.3);
+    color:white;
+    font-weight: bold;
+    font-size: 14px;
+    box-sizing: border-box;
 }
 .input-with-unit span {
     font-size: 13px;
     color: #a39ce3;
+    white-space: nowrap;
 }
 .shoot-button {
     width: 100%;

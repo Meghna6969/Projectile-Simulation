@@ -31,35 +31,43 @@
         <div class="section-title">Launch Parameters</div>
         <div class="input-group">
             <label for="initial-velocity">Initial velocity</label>
-            <div class="input-with-unit">
-                <input type="number" id="initial-velocity" value="20" min="0" max="50" step="1">
-                <span>m/s</span>
+            <div class="input-controls">
+                <input type="range" id="velocity-slider" class="slider" min="0" max="50" value="20" step="0.5">
+                <div class ="input-with-unit">
+                    <input type="number" id="initial-velocity" value="20" min="0" max="50" step="1">
+                    <span>m/s</span>
+                </div>
             </div>
-             <input type="range" id="velocity-slider" class="slider" min="0" max="50" value="0" step="0.5">
         </div>
-        <div class="input-group" id="angle-x-group">
+        <div class="input-group">
             <label for="angle-x">Angle X</label>
-            <div class="input-with-unit">
-                <input type="number" id="angle-x" value="0" min="0" max="180" step="1">
-                <span>°</span>
+            <div class="input-controls">
+                <input type="range" id="angle-x-slider" class="slider" min="0" max="180" value="0" step="0.5">
+                <div class ="input-with-unit">
+                    <input type="number" id="angle-x" value="0" min="0" max="180" step="1">
+                    <span>°</span>
+                </div>
             </div>
-            <input type="range" id="angle-x-slider" class="slider" min="0" max="180" value="0" step="0.5">
         </div>
-        <div class="input-group" id="angle-y-group">
+        <div class="input-group">
             <label for="angle-y">Angle Y</label>
-            <div class="input-with-unit">
-                <input type="number" id="angle-y" value="0" min="0" max="180" step="1">
-                <span>°</span>
+            <div class="input-controls">
+                <input type="range" id="angle-y-slider" class="slider" min="0" max="180" value="0" step="0.5">
+                <div class ="input-with-unit">
+                    <input type="number" id="angle-y" value="0" min="0" max="180" step="1">
+                    <span>°</span>
+                </div>
             </div>
-            <input type="range" id="angle-y-slider" class="slider" min="0" max="180" value="0" step="0.5">
         </div>
-        <div class="input-group" id="angle-z-group">
+        <div class="input-group">
             <label for="angle-z">Angle Z</label>
-            <div class="input-with-unit">
-                <input type="number" id="angle-z" value="0" min="0" max="180" step="1">
-                <span>°</span>
+            <div class="input-controls">
+                <input type="range" id="angle-z-slider" class="slider" min="0" max="180" value="0" step="0.5">
+                <div class ="input-with-unit">
+                    <input type="number" id="angle-z" value="0" min="0" max="180" step="1">
+                    <span>°</span>
+                </div>
             </div>
-            <input type="range" id="angle-z-slider" class="slider" min="0" max="180" value="0" step="0.5">
         </div>
         <div class="input-group">
             <label for="height">Initial Height</label>
@@ -68,6 +76,14 @@
                 <span>m</span>
             </div>
             <input type="range" id="height-slider" class="slider" min="0" max="45" value="0" step="0.5">
+        </div>
+        <div class="input-group">
+            <label for="gravity">Gravity</label>
+            <div class="input-with-unit">
+                <input type="number" id="gravity" value="9.82" min="2" max="20" step="0.5">
+                <span>m/s²</span>
+            </div>
+            <input type="range" id="gravity-slider" class="slider" min="0" max="45" value="9.82" step="0.5">
         </div>
     </div>
      <div class="control-section">

@@ -4,10 +4,15 @@ let isCurr2D = false;
 let gridHelper;
 let cannonModel;
 
+let gravity = 9.82;
+
 let activeProjectile = null;
 let projectileStartTime = 0;
 let maxHeight = 0;
 let dataPoints = [];
+
+let trajectoryLines = [];
+const MAX_TRAJECTORY_LINES = 3;
 
 // Physics has started :(
 let world;
@@ -35,6 +40,8 @@ const heightInput = document.getElementById('height');
 const heightSlider = document.getElementById('height-slider');
 const angleXGroup = document.getElementById('angle-x-group');
 const launchButton = document.getElementById('shoot-btn');
+const gravityInput = document.getElementById('gravity');
+const gravitySlider = document.getElementById('gravity-slider');
 
 launchButton.addEventListener('click', launchProjectile);
 
@@ -91,9 +98,23 @@ heightInput.addEventListener('input', (e) => {
         
     }
 });
+
+gravitySlider.addEventListener('input', (e) =>{
+    gravityInput.value = e.target.value;
+    gravity = parseFloat(e.target.value);
+    world.gravity.set(0,-gravity, 0);
+    document.getElementById('gravity').textContent = gravity.toFixed(2) + ' m/s²';
+});
+gravityInput.addEventListener('input', (e) => {
+    gravitySlider.value = e.target.value;
+    gravity = parseFloat(e.target.value);
+    world.gravity.set(0,-gravity, 0);
+    document.getElementById('gravity').textContent = gravity.toFixed(2) + ' m/s²';
+});
+
 function setupPhysics(){
     world = new CANNON.World();
-    world.gravity.set(0, -9.82, 0);
+    world.gravity.set(0, -gravity, 0);
     world.broadphase = new CANNON.NaiveBroadphase();
     world.solver.iterations = 10;
 
@@ -408,10 +429,20 @@ function launchProjectile(){
     dataPoints = [];
     scene.add(mesh);
     physicsMeshes.push(mesh);
+
+    removeOldestTrajectory();
+    const trajectory = createTrajectoryLine(body);
+    trajectoryLines.push(trajectory);
+
+    activeProjectile = physicsBodies.length - 1;
+    projectileStartTime = Date.now();
+    maxHeight = h0;
+    dataPoints = [];
 }
 function animate(){
     requestAnimationFrame(animate);
     updatePhysics();
+    updateTrajectoryLines();
     updateDetailsPanel();
     controls.update();
     renderer.render(scene, camera);
@@ -437,6 +468,7 @@ function updateDetailsPanel(){
             x: body.position.x,
             z: body.position.z
         });
+        updateDataTable();
     }
     if(currentHeight <= 0.5){
         activeProjectile = null;
@@ -446,12 +478,56 @@ function updateDataTable(){
     const tbody = document.getElementById('data-table-body');
     tbody.innerHTML = '';
     dataPoints.forEach(points => {
-        const row = tbody.inserRow();
+        const row = tbody.insertRow();
         row.insertCell(0).textContent = points.time.toFixed(2);
         row.insertCell(1).textContent = points.height.toFixed(2);
         row.insertCell(2).textContent = points.x.toFixed(2);
         row.insertCell(3).textContent = points.z.toFixed(2);
     });
+}
+function createTrajectoryLine(body){
+    const colors = [0x00ff00, 0x00ffff, 0xff00ff];
+    const activeCount = trajectoryLines.filter(t => scene.children.includes(t.line)).length;
+    const colorIndex = activeCount % colors.length;
+
+    const points = [body.position.clone()];
+    const geometry = new THREE.BufferGeometry();
+    geometry.setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+        color: colors[colorIndex],
+        linewidth: 2
+    });
+    const line = new THREE.Line(geometry, material);
+    scene.add(line);
+
+    return {
+        line: line,
+        points: points,
+        body: body,
+        active: true
+    };
+}
+function updateTrajectoryLines(){
+    trajectoryLines.forEach(trajData => {
+        if(!trajData.active) return;
+        const body = trajData.body;
+
+        if(body.position.y <= 0.5){
+            trajData.active = false;
+            return;
+        }
+        trajData.points.push(body.position.clone());
+        trajData.line.geometry.setFromPoints(trajData.points);
+        trajData.line.geometry.attributes.position.needsUpdate = true;
+    });
+}
+function removeOldestTrajectory(){
+    if(trajectoryLines.length >= MAX_TRAJECTORY_LINES){
+        const oldest = trajectoryLines.shift();
+        scene.remove(oldest.line);
+        oldest.line.geometry.dispose();
+        oldest.line.material.dispose();
+    }
 }
 setupPhysics();
 updateRotationLocks();
