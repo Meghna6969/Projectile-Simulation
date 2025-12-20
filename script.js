@@ -186,32 +186,36 @@ function addPhysicsBox(x, y, z, width, height, depth, color = 0xff0000){
     return {mesh, body};
 }
 function updatePhysics(){
-    world.step(1/60);
-    for(let i = 0; i < physicsBodies.length; i++){
-        physicsMeshes[i].position.copy(physicsBodies[i].position);
-        physicsMeshes[i].quaternion.copy(physicsBodies[i].quaternion);
-    }
-
     // Adding drag boutta suck hard
     // Drag equation straight from google: FD = 0.5 * rho * drag_coefficient * A * v^2;
     // We could also do this with linear damping (which almost physics accurate but still not physically accurate and thats also going to be
     // per ball basis so rather than that just do it for the whole scene
     // Apparently Drag gotta be updated every second for it to work so we going to run a simulation loop later in the code
     physicsBodies.forEach(body => {
-        const velocity = body.velocity(); // error with this line something with velocity()
+        if(airResistent && body.velocity){
+            const velocity = body.velocity; // error with this line something with velocity()
         const speed = velocity.length();
-        if(speed > 0.01){
+        if(speed > 0.01 && body.mass > 0){
             // Just so we dont apply drag for statinary objects
             //const AIR_DENSITY = 1.225;
             //const DRAG_COEFFICIENT = 0.47;
             //const CROSS_SECTIONAL_AREA = Math.PI * Math.pow(0.5, 2);
-            const dragMagnitude = 0.5 * AIR_DENSITY * DRAG_COEFFICIENT * CROSS_SECTIONAL_AREA * speed * speed;
+            const radius = body.shapes[0].radius;
+            const area = Math.PI * radius * radius;
+            const dragMagnitude = 0.5 * AIR_DENSITY * DRAG_COEFFICIENT * area * speed * speed;
             const dragForce = velocity.clone();
             dragForce.normalize();
-            dragForce.scale(-dragMagnitude);
-            body.applyForce(dragForce, body.position);
+            dragForce.scale(-dragMagnitude, dragForce);
+            body.applyForce(dragForce, body.position);``
         }
+        }  
     });
+
+    world.step(1/60);
+    for(let i = 0; i < physicsBodies.length; i++){
+        physicsMeshes[i].position.copy(physicsBodies[i].position);
+        physicsMeshes[i].quaternion.copy(physicsBodies[i].quaternion);
+    }
 }
 function updateRotationLocks(){
     if(isCurr2D){
@@ -466,7 +470,7 @@ function launchProjectile(){
         mass: mass,
         shape: shape,
         linearDamping: 0.1,
-        angluarDamping: 0.1,
+        angularDamping: 0.1,
         position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z)
     });
 
