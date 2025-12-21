@@ -242,3 +242,9 @@ toggle-in:checked {
 .projectile-button:active{
     transform: scale(0.98);
 }
+.sim-button:disabled{
+    background-color: grey;
+    color: #666;
+    cursor: not-allowed;
+    opacity: 0.5;
+}

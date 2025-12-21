@@ -9,7 +9,7 @@ let gridHelper;
 let ramp; // Visual 3D Three js object
 let rampBody; // CANNON.js physics object
 
-let isSimulationFinished = false;
+let isSimulationFinished = true; // initially there is no simulation so true
 let frozenTime = 0;
 let gravity = 9.82;
 let mass = 2;
@@ -104,7 +104,6 @@ massInput.addEventListener('input', (e) => {
 airResistentInput.addEventListener('input', (e) => {
     airResistent = e.target.checked;
     if (airResistent) {
-        enableAirResistence();
         console.log("Air resistence is turn on");
     }
     else {
@@ -113,56 +112,66 @@ airResistentInput.addEventListener('input', (e) => {
 });
 
 function launchSim() {
-    world.time = 0;
-    finalVelocity = 0;
-    isSimulationFinished = false;
-    frozenTime = 0;
+    console.log("isSimulationFinished =" + isSimulationFinished);
+    if (isSimulationFinished) {
+        world.time = 0;
+        finalVelocity = 0;
+        isSimulationFinished = false;
+        frozenTime = 0;
 
-    const v0 = parseFloat(velocityInput.value);
-    const angle = parseFloat(rampAngleInput.value);
-    const initRampHeight = parseFloat(rampHeightInput.value);
-    const angleInRad = angle * (Math.PI / 180);
-    const distance = parseFloat(rampDistanceInput.value);
-    const rampHeight = Math.sin(angleInRad) * distance;
-    const mass = parseFloat(massInput.value);
-    const mu = parseFloat(kineticFriction.value);
+        const v0 = parseFloat(velocityInput.value);
+        const angle = parseFloat(rampAngleInput.value);
+        const initRampHeight = parseFloat(rampHeightInput.value);
+        const angleInRad = angle * (Math.PI / 180);
+        const distance = parseFloat(rampDistanceInput.value);
+        const rampHeight = Math.sin(angleInRad) * distance;
+        const mass = parseFloat(massInput.value);
+        const mu = parseFloat(kineticFriction.value);
 
-    if(world.contactmaterials[0]){
-        world.contactmaterials[0].friction = mu;
-    }
-    // Make the projectile
-    const radius = 0.5 * mass * 0.1;
-    const startPos = new THREE.Vector3(0.1, rampHeight + radius + initRampHeight + 0.2, 2);
-    const shape = new CANNON.Sphere(radius);
-    const body = new CANNON.Body({
-        mass: mass,
-        shape: shape,
-        material: ballMaterial,
-        linearDamping: 0.05, //small damping for stability
-        angularDamping: 0,
-        position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z)
-    });
-    if(v0 > 0){
-        const vx = v0 * Math.cos(angleInRad);
-        const vy = -v0 * Math.sin(angleInRad);
-        body.velocity.set(vx, vy, 0);
-    }
-    body.addEventListener("collide", (e) => {
-        if(!isSimulationFinished && e.body.mass === 0 && e.body !== rampBody){
-            isSimulationFinished = true;
-            finalVelocity = body.velocity.length();
-            frozenTime = world.time;
+        if (world.contactmaterials[0]) {
+            world.contactmaterials[0].friction = mu;
         }
-    })
-    world.addBody(body);
-    physicsBodies.push(body);
-    const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = new THREE.MeshStandardMaterial({color: 0xffff00});
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.copy(body.position);
+        // Make the projectile
+        const radius = 0.5 * mass * 0.1;
+        const startPos = new THREE.Vector3(0.1, rampHeight + radius + initRampHeight + 0.2, 2);
+        const shape = new CANNON.Sphere(radius);
+        const body = new CANNON.Body({
+            mass: mass,
+            shape: shape,
+            material: ballMaterial,
+            linearDamping: 0.05, //small damping for stability
+            angularDamping: 0,
+            position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z)
+        });
+        if (v0 > 0) {
+            const vx = v0 * Math.cos(angleInRad);
+            const vy = -v0 * Math.sin(angleInRad);
+            body.velocity.set(vx, vy, 0);
+        }
+        body.addEventListener("collide", (e) => {
+            if (!isSimulationFinished && e.body.mass === 0 && e.body !== rampBody) {
+                isSimulationFinished = true;
+                console.log("Collision with the ground disabling setting the issimulationfinished to true")
+                finalVelocity = body.velocity.length();
+                frozenTime = world.time;
+            }
+        })
+        world.addBody(body);
+        physicsBodies.push(body);
+        const geometry = new THREE.SphereGeometry(radius, 32, 32);
+        const material = new THREE.MeshStandardMaterial({ color: 0xffff00 });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.copy(body.position);
 
-    scene.add(mesh);
-    physicsMeshes.push(mesh);
+        scene.add(mesh);
+        physicsMeshes.push(mesh);
+    }
+    else {
+        // do nothing
+        // grey out the start simulation button
+        console.log("AHAHAHAH IN THE ELSE HERE");
+        simulationButton.disabled = true;
+    }
 
 }
 function setupPhysics() {
@@ -175,10 +184,10 @@ function setupPhysics() {
         friction: 0.1, // Initially set to 0.1 will change it dynamically
         restitution: 0.1, // Basically no bounciness
         frictionEquationStiffness: 1e6,
-        frictionEquationRelaxation:3
+        frictionEquationRelaxation: 3
     });
     world.addContactMaterial(contactMaterial);
-    
+
     world.broadphase = new CANNON.NaiveBroadphase();
     world.solver.iterations = 10;
 
@@ -224,7 +233,7 @@ function setupThreeScene() {
     controls.target.set(10, 20, 0);
 
     controls.update();
-    
+
     const toggle = document.getElementById('2or3-toggle');
     toggle.addEventListener('change', (e) => {
         const is3D = e.target.checked;
@@ -341,11 +350,11 @@ function createBackground() {
 
     });
 }
-function updateRamp(){
+function updateRamp() {
     const L = parseFloat(rampDistanceInput.value) || 5;
     const initHeight = parseFloat(rampHeightInput.value);
     const angleDeg = parseFloat(rampAngleInput.value) || 30;
-    const angleRad = (angleDeg) * (Math.PI/ 180);
+    const angleRad = (angleDeg) * (Math.PI / 180);
 
     const rampBase = Math.cos(angleRad) * L;
     const rampHeight = Math.sin(angleRad) * L;
@@ -357,41 +366,72 @@ function updateRamp(){
     shape.lineTo(0, rampHeight);
     shape.closePath();
 
-    const extrudeSettings = {depth: rampWidth, bevelEnabled: false};
+    const extrudeSettings = { depth: rampWidth, bevelEnabled: false };
     const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    if(ramp){
+    if (ramp) {
         scene.remove(ramp);
         ramp.geometry.dispose();
     }
-    const material = new THREE.MeshStandardMaterial({color: 0x44aa88});
+    const material = new THREE.MeshStandardMaterial({ color: 0x44aa88 });
     ramp = new THREE.Mesh(geometry, material);
     ramp.position.set(0, initHeight, 0);
     scene.add(ramp);
 
-    if(rampBody){
+    if (rampBody) {
         world.removeBody(rampBody);
     }
     const vertices = geometry.attributes.position.array;
     const indices = [];
-    for(let i = 0; i < vertices.length / 3; i++){
+    for (let i = 0; i < vertices.length / 3; i++) {
         indices.push(i);
     }
     const cannonShape = new CANNON.Trimesh(vertices, indices);
-    rampBody = new CANNON.Body({mass: 0, material: rampMaterial});
+    rampBody = new CANNON.Body({ mass: 0, material: rampMaterial });
     rampBody.addShape(cannonShape);
 
     rampBody.position.set(ramp.position.x, ramp.position.y, ramp.position.z);
     world.addBody(rampBody);
 
 }
-function updatePhysics(){
-    world.step(1/60);
+function updatePhysics() {
+    physicsBodies.forEach(body => {
+        if (body.mass > 0) {
+            applyDragForce(body);
+        }
+    });
+
+    world.step(1 / 60);
     
-    for(let i = 0; i < physicsBodies.length; i++){
+    for (let i = 0; i < physicsBodies.length; i++) {
         physicsMeshes[i].position.copy(physicsBodies[i].position);
         physicsMeshes[i].quaternion.copy(physicsBodies[i].quaternion);
 
-        if(i === physicsBodies.length - 1){
+        if (!isSimulationFinished) {
+            simulationButton.disabled = true;
+            rampDistanceInput.disabled = true;
+            rampDistanceSlider.disabled = true;
+            kineticFriction.disabled = true;
+            kineticFrictionSlider.disabled = true;
+            rampHeightInput.disabled = true;
+            rampHeightSlider.disabled = true;
+            rampAngleInput.disabled = true;
+            rampAngleSlider.disabled = true;
+        }
+        else {
+            simulationButton.disabled = false;
+            rampDistanceInput.disabled = false;
+            rampDistanceSlider.disabled = false;
+            kineticFriction.disabled = false;
+            kineticFrictionSlider.disabled = false;
+            rampHeightInput.disabled = false;
+            rampHeightSlider.disabled = false;
+            rampAngleInput.disabled = false;
+            rampAngleSlider.disabled = false;
+        }
+
+
+
+        if (i === physicsBodies.length - 1) {
             const body = physicsBodies[i];
             const currentTime = isSimulationFinished ? frozenTime.toFixed(2) : world.time.toFixed(2);
             const displayVel = isSimulationFinished ? finalVelocity : body.velocity.length();
@@ -407,6 +447,19 @@ function updatePhysics(){
         }
     }
 }
+function applyDragForce(body) {
+    if (!airResistent) return;
+    const velocity = body.velocity;
+    const speed = velocity.length();
+
+    if (speed > 0.01) {
+        const radius = body.shapes[0].radius;
+        const area = Math.PI * radius * radius;
+        const dragMagnitude = 0.5 * AIR_DENSITY * speed * speed * DRAG_COEFFICIENT * area;
+        const dragForce = velocity.unit().scale(-dragMagnitude);
+        body.applyForce(dragForce, body.position);
+    }
+}
 function animate() {
     requestAnimationFrame(animate);
     updatePhysics();
@@ -420,3 +473,4 @@ setupThreeScene();
 setupLights();
 createBackground();
 updateRamp();
+isSimulationFinished = true;
