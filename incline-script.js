@@ -9,12 +9,16 @@ let gridHelper;
 let ramp; // Visual 3D Three js object
 let rampBody; // CANNON.js physics object
 
+let isSimulationFinished = false;
+let frozenTime = 0;
 let gravity = 9.82;
 let mass = 2;
+let finalVelocity = 0;
 
 let airResistent = false;
 const AIR_DENSITY = 1.225;
 const DRAG_COEFFICIENT = 0.47;
+let ballMaterial, rampMaterial;
 
 let world;
 let physicsBodies = [];
@@ -83,9 +87,11 @@ rampDistanceInput.addEventListener('input', (e) => {
 
 kineticFrictionSlider.addEventListener('input', (e) => {
     kineticFriction.value = e.target.value;
+    updateRamp();
 });
 kineticFriction.addEventListener('input', (e) => {
     kineticFrictionSlider.value = e.target.value;
+    updateRamp();
 });
 
 massSlider.addEventListener('input', (e) => {
@@ -107,6 +113,11 @@ airResistentInput.addEventListener('input', (e) => {
 });
 
 function launchSim() {
+    world.time = 0;
+    finalVelocity = 0;
+    isSimulationFinished = false;
+    frozenTime = 0;
+
     const v0 = parseFloat(velocityInput.value);
     const angle = parseFloat(rampAngleInput.value);
     const initRampHeight = parseFloat(rampHeightInput.value);
@@ -114,19 +125,35 @@ function launchSim() {
     const distance = parseFloat(rampDistanceInput.value);
     const rampHeight = Math.sin(angleInRad) * distance;
     const mass = parseFloat(massInput.value);
-    
+    const mu = parseFloat(kineticFriction.value);
+
+    if(world.contactmaterials[0]){
+        world.contactmaterials[0].friction = mu;
+    }
     // Make the projectile
     const radius = 0.5 * mass * 0.1;
-    const startPos = new THREE.Vector3(0.1, rampHeight + radius + initRampHeight, 2);
+    const startPos = new THREE.Vector3(0.1, rampHeight + radius + initRampHeight + 0.2, 2);
     const shape = new CANNON.Sphere(radius);
     const body = new CANNON.Body({
         mass: mass,
         shape: shape,
-        linearDamping: 0.1,
-        angularDamping: 0.1,
+        material: ballMaterial,
+        linearDamping: 0.05, //small damping for stability
+        angularDamping: 0,
         position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z)
     });
-
+    if(v0 > 0){
+        const vx = v0 * Math.cos(angleInRad);
+        const vy = -v0 * Math.sin(angleInRad);
+        body.velocity.set(vx, vy, 0);
+    }
+    body.addEventListener("collide", (e) => {
+        if(!isSimulationFinished && e.body.mass === 0 && e.body !== rampBody){
+            isSimulationFinished = true;
+            finalVelocity = body.velocity.length();
+            frozenTime = world.time;
+        }
+    })
     world.addBody(body);
     physicsBodies.push(body);
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
@@ -141,6 +168,17 @@ function launchSim() {
 function setupPhysics() {
     world = new CANNON.World();
     world.gravity.set(0, -gravity, 0);
+    ballMaterial = new CANNON.Material("ballMaterial");
+    rampMaterial = new CANNON.Material("rampMaterial");
+
+    const contactMaterial = new CANNON.ContactMaterial(ballMaterial, rampMaterial, {
+        friction: 0.1, // Initially set to 0.1 will change it dynamically
+        restitution: 0.1, // Basically no bounciness
+        frictionEquationStiffness: 1e6,
+        frictionEquationRelaxation:3
+    });
+    world.addContactMaterial(contactMaterial);
+    
     world.broadphase = new CANNON.NaiveBroadphase();
     world.solver.iterations = 10;
 
@@ -242,13 +280,13 @@ function setupThreeScene() {
     animate();
 }
 function setupLights() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 2);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
     directionalLight.position.set(10, 20, 10);
     scene.add(directionalLight);
 
-    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 1);
+    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 2);
     directionalLight2.position.set(-10, 10, -10);
     scene.add(directionalLight2);
 }
@@ -282,9 +320,10 @@ function createBackground() {
     const zAxis = createAxis(0x007ff, { x: Math.PI / 2, y: 0, z: 0 }, { x: 0, y: 0, z: axisLength / 2 });
     scene.add(zAxis);
 
-    // Initializing the gridHelper for the 3d view
+    // Initializing the gridHelper for the 2d view
     const gridHelper = new THREE.GridHelper(boxSize, 20, 0xa39ce3, 0xa39ce3);
-    gridHelper.position.set(boxSize / 2, 0, boxSize / 2);
+    gridHelper.rotation.x = Math.PI / 2;
+    gridHelper.position.set(boxSize / 2, boxSize / 2, 0);
     scene.add(gridHelper);
 
     // Toggle switch between 3d and 2D
@@ -338,7 +377,7 @@ function updateRamp(){
         indices.push(i);
     }
     const cannonShape = new CANNON.Trimesh(vertices, indices);
-    rampBody = new CANNON.Body({mass: 0});
+    rampBody = new CANNON.Body({mass: 0, material: rampMaterial});
     rampBody.addShape(cannonShape);
 
     rampBody.position.set(ramp.position.x, ramp.position.y, ramp.position.z);
@@ -347,9 +386,25 @@ function updateRamp(){
 }
 function updatePhysics(){
     world.step(1/60);
+    
     for(let i = 0; i < physicsBodies.length; i++){
         physicsMeshes[i].position.copy(physicsBodies[i].position);
         physicsMeshes[i].quaternion.copy(physicsBodies[i].quaternion);
+
+        if(i === physicsBodies.length - 1){
+            const body = physicsBodies[i];
+            const currentTime = isSimulationFinished ? frozenTime.toFixed(2) : world.time.toFixed(2);
+            const displayVel = isSimulationFinished ? finalVelocity : body.velocity.length();
+
+            // Theoritical Friction
+            const angleRad = parseFloat(rampAngleInput.value) * (Math.PI / 180);
+            const mu = parseFloat(kineticFriction.value);
+            const frictionForce = (mu * body.mass * gravity * Math.cos(angleRad)).toFixed(2);
+
+            document.getElementById('current-time').innerText = `${currentTime} s`;
+            document.getElementById('final-velocity').innerText = `${displayVel.toFixed(2)} m/s`;
+            document.getElementById('friction-detail').innerHTML = `F<sub>k</sub>= ${frictionForce} N`;
+        }
     }
 }
 function animate() {

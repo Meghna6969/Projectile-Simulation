@@ -268,3 +268,22 @@ toggle-in:checked {
     width: 30px;
     height: 30px;
 }
+.ramp-button{
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background: #434081;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3;
+}
+.ramp-button:hover{
+    background: #b5e;
+}
+.ramp-button:active{
+    transform: scale(0.98);
+}
