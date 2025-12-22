@@ -27,8 +27,6 @@ let physicsMeshes = [];
 // Ramp settings
 const inclineAngle = 0;
 const L = 5  //5 meters to initialize
-const H = Math.tan(inclineAngle) * L;
-const W = 8;
 const toggle = document.getElementById('2or3-toggle');
 toggle.checked = false;
 
@@ -65,7 +63,7 @@ velocitySlider.addEventListener('input', (e) => {
 velocityInput.addEventListener('input', (e) => {
     velocitySlider.value = e.target.value;
 });
-
+ 
 rampAngleSlider.addEventListener('input', (e) => {
     rampAngleInput.value = e.target.value;
     updateRamp();
@@ -401,7 +399,7 @@ function updatePhysics() {
     });
 
     world.step(1 / 60);
-    
+
     for (let i = 0; i < physicsBodies.length; i++) {
         physicsMeshes[i].position.copy(physicsBodies[i].position);
         physicsMeshes[i].quaternion.copy(physicsBodies[i].quaternion);
