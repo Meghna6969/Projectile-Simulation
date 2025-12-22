@@ -314,7 +314,7 @@ function createBackground(){
             gridHelper.position.set(boxSize / 2, 0, boxSize / 2);
         }
     
-    })
+    });
 }
 
 function setupThreeScene(){
