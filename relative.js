@@ -17,6 +17,10 @@ let groundSize;
 let shipModel;
 let water;
 
+//Ship values
+let shipRotation = 0;
+
+
 let world;
 let physicsBodies = [];
 let physicsMeshes = [];
@@ -33,9 +37,11 @@ const shipVelocitySlider = document.getElementById("velocity-ship-slider");
 
 aimAngleInput.addEventListener('input', (e) => {
     aimAngleSlider.value = e.target.value;
+    updateShip();
 });
 aimAngleSlider.addEventListener('input', (e) => {
     aimAngleInput.value = e.target.value;
+    updateShip();
 });
 velocityRiverInput.addEventListener('input', (e) => {
     velocityRiverSlider.value = e.target.value;
@@ -119,20 +125,51 @@ function createBackground() {
 
 
     // Water and the sand stuff
-    /**const waterGeometry = new THREE.PlaneGeometry(20, 50);
-    const waterMaterial = new THREE.MeshStandardMaterial({
-        color: 0x0077be,
-        transparent: true,
-        opacity: 0.8,
-        roughness: 0.1,
-        metalness: 0.5
+    const sandGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
+    const sandMaterial = new THREE.MeshStandardMaterial({
+        color: 0xe2ca76
     });
-    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    const sandMesh = new THREE.Mesh(sandGeometry, sandMaterial);
+    scene.add(sandMesh);
+    sandMesh.rotation.x = -Math.PI / 2;
+    sandMesh.position.set(groundSize / 2, 0, groundSize / 2);
+    const waterGeometry = new THREE.BoxGeometry(20, 40, 0.5, 60, 60, 1);
+    const waterMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1e88e5,
+        emissive: 0x001a33,
+        emissiveIntensity: 0.2,
+        roughness: 0.9,
+        metalness: 0.2,
+        flatShading:false,
+        transparent: true,
+        opacity: 1,
+        side: THREE.DoubleSide
+    });
+    water = new THREE.Mesh(waterGeometry, waterMaterial);
     water.rotation.x = -Math.PI / 2;
-    water.position.set(groundSize / 2, 0, groundSize / 2);
+    water.position.set(groundSize / 2, 0.1, groundSize / 2);
     scene.add(water);
-    static water**/
-    const waterGeometry = new THREE.PlaneGeometry(20, 50);
+    const positions = water.geometry.attributes.position.array;
+    water.userData.originalPositions = new Float32Array(positions);
+
+    const foamGeometry = new THREE.PlaneGeometry(20, 40, 60, 60);
+    const foamMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.25,
+        roughness: 1,
+        metalness: 0.0,
+        side: THREE.DoubleSide
+    });
+    const foam = new THREE.Mesh(foamGeometry, foamMaterial);
+    foam.rotation.x = -Math.PI / 2;
+    foam.position.set(groundSize / 2, 0.3, groundSize / 2);
+    scene.add(foam);
+    const foamPositions = foam.geometry.attributes.position.array;
+    foam.userData.originalPositions = new Float32Array(foamPositions);
+    window.foam = foam;
+    
+    /**const waterGeometry = new THREE.PlaneGeometry(20, 50);
     water = new Water(
         waterGeometry,
         {
@@ -141,24 +178,27 @@ function createBackground() {
             waterNormals: new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg', function (texture) {
                 texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
             }),
-            sunDirection: new THREE.Vector3(10, 10, 10).normalize(),
-            sunColor: 0x444444,
-            waterColor: 0x03045e,
-            distortionScale: 10.7,
+            sunDirection: new THREE.Vector3(0, 20, 0).normalize(),
+            sunColor: 0xffffff,
+            waterColor: 0x0066cc,
+            distortionScale: 2.0,
         }
     );
     scene.add(water);
     water.rotation.x = -Math.PI / 2;
-    water.position.set(groundSize / 2, 1, groundSize / 2);
-    water.material.transparent = true;
-    water.material.uniforms['size'].value = 10.0;
+    water.position.set(groundSize / 2, 0.1, groundSize / 2);
+    water.material.transparent = false;
+    water.material.uniforms['size'].value = 0.6;
+    water.material.uniforms['distortionScale'].value = 2.0;
+    water.material.uniforms['alpha'].value = 1;
+    **/
 }
 function setupThreeScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xF6Dcbd);
     const aspect = window.innerWidth / innerHeight;
     const d = 25;
-    scene.environment = scene.background;
+    //scene.environment = scene.background;
 
     perspectiveCamera = new THREE.PerspectiveCamera(65, aspect, 0.1, 1000);
     orthographicCamera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 1000);
@@ -250,21 +290,65 @@ function loadObjects() {
     const loader = new GLTFLoader();
     loader.load('viking_ship.glb', function (gltf) {
         shipModel = gltf.scene;
-        shipModel.position.set(0, 0, groundSize / 2);
-        shipModel.scale.set(0.5, 0.5, 0.5);
+        shipModel.position.set(groundSize / 3.8, 0, groundSize / 2);
+        shipModel.scale.set(0.3, 0.3, 0.3);
         shipModel.rotation.y = -Math.PI / 2
         scene.add(shipModel);
+        shipModel
     });
 }
 function animate() {
     requestAnimationFrame(animate);
     updatePhysics();
     controls.update();
-    if (water) {
-        water.material.uniforms['time'].value += 1 / 60;
+    if (water && water.userData.originalPositions) {
+        const time = Date.now() * 0.001;
+        const positions = water.geometry.attributes.position.array;
+        const originalPositions = water.userData.originalPositions;
+
+        for(let i = 0; i < positions.length; i+= 3){
+            const x = originalPositions[i];
+            const y = originalPositions[i + 1];
+            const z = originalPositions[i + 2];
+
+            if (originalPositions[i + 2] > 0.4) {
+                const wave1 = Math.sin(x*0.4 + time * 0.5) * 0.06;
+                const wave2 = Math.cos(x*0.3 + time * 0.7) * 0.05;
+                const wave3 = Math.sin((x * 0.2 + y * 0.2) + time * 0.4) * 0.04;
+                const wave4 = Math.cos((x * 0.15 - y * 0.15) + time * 0.9) * 0.03;
+                const ripple = Math.sin(x * 0.8 + y * 0.8 + time * 2) * 0.01;
+                positions[i + 2] = originalPositions[i + 2] + wave1 + wave2 + wave3 + wave4 + ripple;
+            }
+        }
+        water.geometry.attributes.position.needsUpdate = true;
+        water.geometry.computeVertexNormals();
+    }
+    //foam same as well
+    if(window.foam && window.foam.userData.originalPositions){
+        const time = Date.now() * 0.001;
+        const positions = window.foam.geometry.attributes.position.array;
+        const originalPositions = window.foam.userData.originalPositions;
+
+        for(let i = 0; i < positions.length; i+= 3){
+            const x = originalPositions[i];
+            const y = originalPositions[i + 1];
+            
+            const foam1 = Math.sin(x * 0.45 + time * 0.6) * 0.07;
+            const foam2 = Math.cos(y * 0.35 + time * 0.8) * 0.06;
+            const foam3 = Math.sin((x * 0.25 + y * 0.2) + time * 0.5) * 0.05;
+            const foam4 = Math.cos((x * 0.18 - y * 0.18) + time * 1.1) * 0.035;
+            const foam5 = Math.sin(x*0.9 + y * 0.9 + time * 2.2) * 0.012;
+
+            positions[i + 2] = foam1 + foam2 + foam3 + foam4 + foam5;
+        }
+        window.foam.geometry.attributes.position.needsUpdate = true;
+        window.foam.geometry.computeVertexNormals();
     }
     renderer.render(scene, camera);
-
+}
+function updateShip(){
+    const rotationInRad = parseFloat(aimAngleInput.value) * Math.PI / 180;
+    shipModel.rotation.y = rotationInRad + (-Math.PI / 2);
 }
 
 setupPhysics();
