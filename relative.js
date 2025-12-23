@@ -127,7 +127,10 @@ function createBackground() {
     // Water and the sand stuff
     const sandGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
     const sandMaterial = new THREE.MeshStandardMaterial({
-        color: 0xe2ca76
+        color: 0xf8e5a1,
+        roughness: 1.0,
+        bumpMap: createGrainTexture(),
+        bumpScale: 0.02
     });
     const sandMesh = new THREE.Mesh(sandGeometry, sandMaterial);
     scene.add(sandMesh);
@@ -195,7 +198,7 @@ function createBackground() {
 }
 function setupThreeScene() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xF6Dcbd);
+    scene.background = new THREE.Color(0x8fdbf7);
     const aspect = window.innerWidth / innerHeight;
     const d = 25;
     //scene.environment = scene.background;
@@ -285,7 +288,17 @@ function setupLights() {
     directionalLight2.position.set(-10, 10, -10);
     scene.add(directionalLight2);
 }
-
+function createGrainTexture(){
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const context = canvas.getContext('2d');
+    for(let i = 0; i < 10000; i++){
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+         
+    }
+}
 function loadObjects() {
     const loader = new GLTFLoader();
     loader.load('viking_ship.glb', function (gltf) {
@@ -302,7 +315,7 @@ function animate() {
     updatePhysics();
     controls.update();
     if (water && water.userData.originalPositions) {
-        const time = Date.now() * 0.001;
+        const time = Date.now() * 0.001 * parseFloat(velocityRiverInput.value);
         const positions = water.geometry.attributes.position.array;
         const originalPositions = water.userData.originalPositions;
 
@@ -325,7 +338,7 @@ function animate() {
     }
     //foam same as well
     if(window.foam && window.foam.userData.originalPositions){
-        const time = Date.now() * 0.001;
+        const time = Date.now() * 0.001 * parseFloat(velocityRiverInput.value);
         const positions = window.foam.geometry.attributes.position.array;
         const originalPositions = window.foam.userData.originalPositions;
 
@@ -348,8 +361,9 @@ function animate() {
 }
 function updateShip(){
     const rotationInRad = parseFloat(aimAngleInput.value) * Math.PI / 180;
-    shipModel.rotation.y = rotationInRad + (-Math.PI / 2);
+    shipModel.rotation.y = -rotationInRad + (-Math.PI / 2);
 }
+
 
 setupPhysics();
 setupThreeScene();
