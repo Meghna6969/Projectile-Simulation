@@ -34,6 +34,7 @@ const velocityRiverInput = document.getElementById("velocity-river");
 const velocityRiverSlider = document.getElementById("velocity-river-slider");
 const shipVelocityInput = document.getElementById("velocity-ship");
 const shipVelocitySlider = document.getElementById("velocity-ship-slider");
+const launchSim = document.getElementById("sim-button");
 
 aimAngleInput.addEventListener('input', (e) => {
     aimAngleSlider.value = e.target.value;
@@ -54,6 +55,9 @@ shipVelocityInput.addEventListener('input', (e) => {
 });
 shipVelocitySlider.addEventListener('input', (e) => {
     shipVelocityInput.value = e.target.value;
+});
+launchSim.addEventListener('input', (e) => {
+    startSimulation();
 });
 
 function setupPhysics() {
@@ -107,7 +111,7 @@ function createBackground() {
     scene.add(zAxis);
 
     const gridHelper = new THREE.GridHelper(groundSize, 20, 0xffffff, 0xffffff);
-    gridHelper.position.set(groundSize / 2, 0, groundSize / 2);
+    gridHelper.position.set(groundSize / 2, 0.2, groundSize / 2);
     scene.add(gridHelper);
 
     const toggle = document.getElementById('2or3-toggle');
@@ -125,20 +129,20 @@ function createBackground() {
 
 
     // Water and the sand stuff
-    const sandGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
+    /**const sandGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
     const sandMaterial = new THREE.MeshStandardMaterial({
         color: 0xf8e5a1,
         roughness: 1.0,
-        bumpMap: createGrainTexture(),
-        bumpScale: 0.02
+        map: createGrainTexture(),
     });
     const sandMesh = new THREE.Mesh(sandGeometry, sandMaterial);
     scene.add(sandMesh);
     sandMesh.rotation.x = -Math.PI / 2;
     sandMesh.position.set(groundSize / 2, 0, groundSize / 2);
-    const waterGeometry = new THREE.BoxGeometry(20, 40, 0.5, 60, 60, 1);
+    **/
+    const waterGeometry = new THREE.BoxGeometry(40, 40, 10, 60, 60, 1);
     const waterMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1e88e5,
+        color: 0x0E87CC,
         emissive: 0x001a33,
         emissiveIntensity: 0.2,
         roughness: 0.9,
@@ -148,25 +152,26 @@ function createBackground() {
         opacity: 1,
         side: THREE.DoubleSide
     });
+    
     water = new THREE.Mesh(waterGeometry, waterMaterial);
     water.rotation.x = -Math.PI / 2;
-    water.position.set(groundSize / 2, 0.1, groundSize / 2);
+    water.position.set(groundSize / 2, -5, groundSize / 2);
     scene.add(water);
     const positions = water.geometry.attributes.position.array;
     water.userData.originalPositions = new Float32Array(positions);
 
-    const foamGeometry = new THREE.PlaneGeometry(20, 40, 60, 60);
+    const foamGeometry = new THREE.PlaneGeometry(30, 40, 60, 60);
     const foamMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         transparent: true,
-        opacity: 0.25,
+        opacity: 0.15,
         roughness: 1,
         metalness: 0.0,
         side: THREE.DoubleSide
     });
     const foam = new THREE.Mesh(foamGeometry, foamMaterial);
     foam.rotation.x = -Math.PI / 2;
-    foam.position.set(groundSize / 2, 0.3, groundSize / 2);
+    foam.position.set(groundSize / 2, 0.1, groundSize / 2);
     scene.add(foam);
     const foamPositions = foam.geometry.attributes.position.array;
     foam.userData.originalPositions = new Float32Array(foamPositions);
@@ -278,26 +283,42 @@ function setupThreeScene() {
     animate();
 }
 function setupLights() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 2);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-    directionalLight.position.set(10, 20, 10);
-    scene.add(directionalLight);
+    const hemiLight = new THREE.HemisphereLight(0x8fdbf7, 0xffa974, 1.2);
+    scene.add(hemiLight);
+    
+    const sunLight = new THREE.DirectionalLight(0xfff5d1, 5);
+    sunLight.position.set(20, 40, 20);
 
-    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 2);
-    directionalLight2.position.set(-10, 10, -10);
-    scene.add(directionalLight2);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.add.width = 2048;
+    sunLight.shadow.mapSize.add.height = 2048;
+    sunLight.shadow.camera.left = -50;
+    sunLight.shadow.camera.right = 50;
+    sunLight.shadow.camera.top = 50;
+    sunLight.shadow.camera.bottom = -50;
+    scene.add(sunLight);
 }
 function createGrainTexture(){
     const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
+    canvas.width = 64;
+    canvas.height = 64;
     const context = canvas.getContext('2d');
+    context.fillStyle = "#ffa974ff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
     for(let i = 0; i < 10000; i++){
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height;
-         
+        const color = Math.random() > 0.5 ? "#f8e4a1" : "#db9071";
+        context.fillStyle = color;
+        context.globalAlpha = Math.random() * 0.5;
+        context.fillRect(x, y, 1, 1);
     }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(20, 20);
+    return texture;
 }
 function loadObjects() {
     const loader = new GLTFLoader();
@@ -359,15 +380,46 @@ function animate() {
     }
     renderer.render(scene, camera);
 }
+function createEnvironment(){
+    const loader = new GLTFLoader();
+    const sandMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffa974,
+        roughness: 0.9,
+        metalness: 0.0
+    });
+    loader.load('sandMap.glb', function (gltf) {
+        const sandMap = gltf.scene;
+        sandMap.traverse((node) => {
+            if(node.isMesh){
+                node.material = sandMaterial;
+                node.receivedShadow = true;
+                node.castShadow = true;
+            }
+        });
+
+        sandMap.position.set(groundSize / 3.8, 0, groundSize / 2);
+        sandMap.scale.set(2.5, 2.5, 2.5);
+        sandMap.rotation.y = -Math.PI / 2
+        scene.add(sandMap);
+
+        const sandMap2 = sandMap.clone();
+        sandMap2.position.set(groundSize / 1.1, 0, groundSize / 2);
+        sandMap2.rotation.y = sandMap.rotation.y + Math.PI;
+        scene.add(sandMap2);
+    });
+}
 function updateShip(){
     const rotationInRad = parseFloat(aimAngleInput.value) * Math.PI / 180;
     shipModel.rotation.y = -rotationInRad + (-Math.PI / 2);
 }
-
+function startSimulation(){
+    
+}
 
 setupPhysics();
 setupThreeScene();
 setupLights();
 createBackground();
 loadObjects();
+createEnvironment();
 isSimulationFinished = true;
