@@ -7,11 +7,10 @@ let scene, camera, renderer, controls;
 let perspectiveCamera, orthographicCamera;
 let isCurr2D = false;
 let gridHelper;
+let lastTime = performance.now();
 
-let isSimulationFinished = true;
-let frozenTime = 0;
+let isSimulating = false;
 let gravity = 9.82;
-let finalVelocity = 0;
 let groundSize;
 
 let shipModel;
@@ -19,6 +18,8 @@ let water;
 
 //Ship values
 let shipRotation = 0;
+let shipVelocityVector = new THREE.Vector3();
+let riverVelocityVector = new THREE.Vector3();
 
 
 let world;
@@ -34,7 +35,7 @@ const velocityRiverInput = document.getElementById("velocity-river");
 const velocityRiverSlider = document.getElementById("velocity-river-slider");
 const shipVelocityInput = document.getElementById("velocity-ship");
 const shipVelocitySlider = document.getElementById("velocity-ship-slider");
-const launchSim = document.getElementById("sim-button");
+const launchSim = document.getElementById("sim-btn");
 
 aimAngleInput.addEventListener('input', (e) => {
     aimAngleSlider.value = e.target.value;
@@ -56,9 +57,7 @@ shipVelocityInput.addEventListener('input', (e) => {
 shipVelocitySlider.addEventListener('input', (e) => {
     shipVelocityInput.value = e.target.value;
 });
-launchSim.addEventListener('input', (e) => {
-    startSimulation();
-});
+launchSim.addEventListener('click', startSimulation);
 
 function setupPhysics() {
     world = new CANNON.World();
@@ -147,12 +146,12 @@ function createBackground() {
         emissiveIntensity: 0.2,
         roughness: 0.9,
         metalness: 0.2,
-        flatShading:false,
+        flatShading: false,
         transparent: true,
         opacity: 1,
         side: THREE.DoubleSide
     });
-    
+
     water = new THREE.Mesh(waterGeometry, waterMaterial);
     water.rotation.x = -Math.PI / 2;
     water.position.set(groundSize / 2, -5, groundSize / 2);
@@ -176,7 +175,7 @@ function createBackground() {
     const foamPositions = foam.geometry.attributes.position.array;
     foam.userData.originalPositions = new Float32Array(foamPositions);
     window.foam = foam;
-    
+
     /**const waterGeometry = new THREE.PlaneGeometry(20, 50);
     water = new Water(
         waterGeometry,
@@ -285,7 +284,7 @@ function setupThreeScene() {
 function setupLights() {
     const hemiLight = new THREE.HemisphereLight(0x8fdbf7, 0xffa974, 1.2);
     scene.add(hemiLight);
-    
+
     const sunLight = new THREE.DirectionalLight(0xfff5d1, 5);
     sunLight.position.set(20, 40, 20);
 
@@ -298,15 +297,15 @@ function setupLights() {
     sunLight.shadow.camera.bottom = -50;
     scene.add(sunLight);
 }
-function createGrainTexture(){
+function createGrainTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
     const context = canvas.getContext('2d');
     context.fillStyle = "#ffa974ff";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    
-    for(let i = 0; i < 10000; i++){
+
+    for (let i = 0; i < 10000; i++) {
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height;
         const color = Math.random() > 0.5 ? "#f8e4a1" : "#db9071";
@@ -333,21 +332,43 @@ function loadObjects() {
 }
 function animate() {
     requestAnimationFrame(animate);
+    const currTime = performance.now();
+    const deltaTime = (currTime - lastTime) / 1000;
+    lastTime = currTime;
     updatePhysics();
     controls.update();
+    if (isSimulating && shipModel) {
+        const resultantVelocity = new THREE.Vector3();
+        resultantVelocity.copy(shipVelocityVector).add(riverVelocityVector);
+
+        shipModel.position.x += resultantVelocity.x * deltaTime * 60 * 0.1;
+        shipModel.position.z += resultantVelocity.z * deltaTime * 60 * 0.1;
+
+        if (shipModel.position.x > groundSize || Math.abs(shipModel.position.z) > groundSize) {
+            isSimulating = false;
+            aimAngleInput.disabled = false;
+            aimAngleSlider.disabled = false;
+            velocityRiverInput.disabled = false;
+            velocityRiverSlider.disabled = false;
+            shipVelocityInput.disabled = false;
+            shipVelocitySlider.disabled = false;
+            launchSim.disabled = false;
+
+        }
+    }
     if (water && water.userData.originalPositions) {
         const time = Date.now() * 0.001 * parseFloat(velocityRiverInput.value);
         const positions = water.geometry.attributes.position.array;
         const originalPositions = water.userData.originalPositions;
 
-        for(let i = 0; i < positions.length; i+= 3){
+        for (let i = 0; i < positions.length; i += 3) {
             const x = originalPositions[i];
             const y = originalPositions[i + 1];
             const z = originalPositions[i + 2];
 
             if (originalPositions[i + 2] > 0.4) {
-                const wave1 = Math.sin(x*0.4 + time * 0.5) * 0.06;
-                const wave2 = Math.cos(x*0.3 + time * 0.7) * 0.05;
+                const wave1 = Math.sin(x * 0.4 + time * 0.5) * 0.06;
+                const wave2 = Math.cos(x * 0.3 + time * 0.7) * 0.05;
                 const wave3 = Math.sin((x * 0.2 + y * 0.2) + time * 0.4) * 0.04;
                 const wave4 = Math.cos((x * 0.15 - y * 0.15) + time * 0.9) * 0.03;
                 const ripple = Math.sin(x * 0.8 + y * 0.8 + time * 2) * 0.01;
@@ -358,20 +379,20 @@ function animate() {
         water.geometry.computeVertexNormals();
     }
     //foam same as well
-    if(window.foam && window.foam.userData.originalPositions){
+    if (window.foam && window.foam.userData.originalPositions) {
         const time = Date.now() * 0.001 * parseFloat(velocityRiverInput.value);
         const positions = window.foam.geometry.attributes.position.array;
         const originalPositions = window.foam.userData.originalPositions;
 
-        for(let i = 0; i < positions.length; i+= 3){
+        for (let i = 0; i < positions.length; i += 3) {
             const x = originalPositions[i];
             const y = originalPositions[i + 1];
-            
+
             const foam1 = Math.sin(x * 0.45 + time * 0.6) * 0.07;
             const foam2 = Math.cos(y * 0.35 + time * 0.8) * 0.06;
             const foam3 = Math.sin((x * 0.25 + y * 0.2) + time * 0.5) * 0.05;
             const foam4 = Math.cos((x * 0.18 - y * 0.18) + time * 1.1) * 0.035;
-            const foam5 = Math.sin(x*0.9 + y * 0.9 + time * 2.2) * 0.012;
+            const foam5 = Math.sin(x * 0.9 + y * 0.9 + time * 2.2) * 0.012;
 
             positions[i + 2] = foam1 + foam2 + foam3 + foam4 + foam5;
         }
@@ -380,7 +401,7 @@ function animate() {
     }
     renderer.render(scene, camera);
 }
-function createEnvironment(){
+function createEnvironment() {
     const loader = new GLTFLoader();
     const sandMaterial = new THREE.MeshStandardMaterial({
         color: 0xffa974,
@@ -390,7 +411,7 @@ function createEnvironment(){
     loader.load('sandMap.glb', function (gltf) {
         const sandMap = gltf.scene;
         sandMap.traverse((node) => {
-            if(node.isMesh){
+            if (node.isMesh) {
                 node.material = sandMaterial;
                 node.receivedShadow = true;
                 node.castShadow = true;
@@ -408,18 +429,34 @@ function createEnvironment(){
         scene.add(sandMap2);
     });
 }
-function updateShip(){
+function updateShip() {
     const rotationInRad = parseFloat(aimAngleInput.value) * Math.PI / 180;
     shipModel.rotation.y = -rotationInRad + (-Math.PI / 2);
 }
-function startSimulation(){
-    
-}
+function startSimulation() {
+    if (!shipModel) return;
+    if (isSimulating) return;
+    aimAngleInput.disabled = true;
+    aimAngleSlider.disabled = true;
+    velocityRiverInput.disabled = true;
+    velocityRiverSlider.disabled = true;
+    shipVelocityInput.disabled = true;
+    shipVelocitySlider.disabled = true;
+    launchSim.disabled = true;
 
+    shipModel.position.set(groundSize / 3.8, 0, groundSize / 2);
+    const shipSpeed = parseFloat(shipVelocityInput.value) * 0.4;
+    const riverSpeed = parseFloat(velocityRiverInput.value) * 0.4;
+    const angleDeg = parseFloat(aimAngleInput.value);
+    const angleRad = angleDeg * (Math.PI / 180);
+
+    shipVelocityVector.set(Math.cos(angleRad) * shipSpeed, 0, -Math.sin(angleRad) * shipSpeed);
+    riverVelocityVector.set(0, 0, riverSpeed);
+    isSimulating = true;
+}
 setupPhysics();
 setupThreeScene();
 setupLights();
 createBackground();
 loadObjects();
 createEnvironment();
-isSimulationFinished = true;
