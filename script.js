@@ -3,6 +3,7 @@ let perspectiveCamera, orthographicCamera;
 let isCurr2D = false;
 let gridHelper;
 let cannonModel;
+let shotCounter = 0;
 
 // Projectile launch paramters that change for every launch
 let gravity = 9.82; // Doesnot change for each ball but for the whole scene
@@ -196,17 +197,13 @@ function updatePhysics(){
             const velocity = body.velocity; // error with this line something with velocity()
         const speed = velocity.length();
         if(speed > 0.01 && body.mass > 0){
-            // Just so we dont apply drag for statinary objects
-            //const AIR_DENSITY = 1.225;
-            //const DRAG_COEFFICIENT = 0.47;
-            //const CROSS_SECTIONAL_AREA = Math.PI * Math.pow(0.5, 2);
             const radius = body.shapes[0].radius;
             const area = Math.PI * radius * radius;
             const dragMagnitude = 0.5 * AIR_DENSITY * DRAG_COEFFICIENT * area * speed * speed;
             const dragForce = velocity.clone();
             dragForce.normalize();
             dragForce.scale(-dragMagnitude, dragForce);
-            body.applyForce(dragForce, body.position);``
+            body.applyForce(dragForce, body.position);
         }
         }  
     });
@@ -497,11 +494,6 @@ function launchProjectile(){
     removeOldestTrajectory();
     const trajectory = createTrajectoryLine(body);
     trajectoryLines.push(trajectory);
-
-    activeProjectile = physicsBodies.length - 1;
-    projectileStartTime = Date.now();
-    maxHeight = h0;
-    dataPoints = [];
 }
 function animate(){
     requestAnimationFrame(animate);
@@ -551,8 +543,9 @@ function updateDataTable(){
 }
 function createTrajectoryLine(body){
     const colors = [0x00ff00, 0x00ffff, 0xff00ff];
-    const activeCount = trajectoryLines.filter(t => scene.children.includes(t.line)).length;
-    const colorIndex = activeCount % colors.length;
+  
+    const colorIndex = shotCounter % colors.length;
+    shotCounter++;
 
     const points = [body.position.clone()];
     const geometry = new THREE.BufferGeometry();

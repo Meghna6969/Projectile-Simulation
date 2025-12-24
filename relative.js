@@ -10,11 +10,13 @@ let lastTime = performance.now();
 let isSimulating = false;
 let gravity = 9.82;
 let groundSize;
+let simulationTime = 0;
 
 let shipModel;
 let water;
 
 // Useful
+let boatVector, riverVector, resVector;
 
 let shipVelocityVector = new THREE.Vector3();
 let riverVelocityVector = new THREE.Vector3();
@@ -305,7 +307,12 @@ function loadObjects() {
 function animate() {
     requestAnimationFrame(animate);
     const currTime = performance.now();
+    
     const deltaTime = (currTime - lastTime) / 1000;
+    if(isSimulating){
+        simulationTime += deltaTime;
+    }
+    
     lastTime = currTime;
 
     controls.update();
@@ -316,6 +323,23 @@ function animate() {
 
         shipModel.position.x += resultantVelocity.x * deltaTime * 60 * 0.1;
         shipModel.position.z += resultantVelocity.z * deltaTime * 60 * 0.1;
+
+        const shipPos = shipModel.position.clone();
+        shipPos.y += 2;
+
+        boatVector.position.copy(shipPos);
+        riverVector.position.copy(shipPos);
+        resVector.position.copy(shipPos);
+
+        const resDir = resultantVelocity.clone().normalize();
+        const resLen = resultantVelocity.length() * 10;
+
+        boatVector.setDirection(shipVelocityVector.clone().normalize());
+        boatVector.setLength(shipVelocityVector.length() * 10);
+        riverVector.setDirection(riverVelocityVector.clone().normalize());
+        riverVector.setLength(riverVelocityVector.length() * 10);
+        resVector.setDirection(resDir);
+        resVector.setLength(resLen);
 
         if (shipModel.position.x > groundSize || Math.abs(shipModel.position.z) > groundSize) {
             isSimulating = false;
@@ -371,6 +395,7 @@ function animate() {
         window.foam.geometry.attributes.position.needsUpdate = true;
         window.foam.geometry.computeVertexNormals();
     }
+    document.getElementById("current-time").innerText = simulationTime.toFixed(2) + "s";
     renderer.render(scene, camera);
 }
 function createEnvironment() {
@@ -425,6 +450,14 @@ function updateShip() {
     const rotationInRad = parseFloat(aimAngleInput.value) * Math.PI / 180;
     shipModel.rotation.y = -rotationInRad + (-Math.PI / 2);
 }
+function setupVectors(){
+    const dir = new THREE.Vector3(1, 0, 0);
+    const origin = new THREE.Vector3(0, 2, 0);
+    boatVector = new THREE.ArrowHelper(dir, origin, 5, 0x0000ff);
+    riverVector = new THREE.ArrowHelper(dir, origin, 5, 0xffff00);
+    resVector = new THREE.ArrowHelper(dir, origin, 5, 0xff0000);
+    scene.add(boatVector, riverVector, resVector);
+}
 function startSimulation() {
     if (!shipModel) return;
     if (isSimulating) return;
@@ -451,6 +484,7 @@ function startSimulation() {
     isSimulating = true;
 }
 function resetSimulation() {
+    simulationTime = 0;
     aimAngleInput.disabled = false;
     aimAngleSlider.disabled = false;
     velocityRiverInput.disabled = false;
@@ -459,6 +493,7 @@ function resetSimulation() {
     shipVelocitySlider.disabled = false;
     launchSim.disabled = false;
     isSimulating = false;
+    document.getElementById("current-time").innerText = "0.00 s";
     shipModel.position.set(groundSize / 3.5, 1.3, groundSize / 2);
 }
 setupPhysics();
@@ -467,3 +502,4 @@ setupLights();
 createBackground();
 loadObjects();
 createEnvironment();
+setupVectors();
