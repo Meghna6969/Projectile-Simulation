@@ -6,6 +6,7 @@ canvas{
     display: block;
 }
 .slider{
+    -webkit-appearance: none;
     flex: 1;
     margin-top: 0;
     height: 6px;
@@ -268,7 +269,7 @@ toggle-in:checked {
     width: 30px;
     height: 30px;
 }
-.ramp-button{
+.home-button{
     width: 100%;
     padding: 12px;
     margin-top: 10px;
@@ -281,9 +282,9 @@ toggle-in:checked {
     cursor: pointer;
     transition: background 0.3;
 }
-.ramp-button:hover{
+.home-button:hover{
     background: #b5e;
 }
-.ramp-button:active{
+.home-button:active{
     transform: scale(0.98);
 }

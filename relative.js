@@ -1,12 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Water } from 'three/addons/objects/Water.js';
 
 let scene, camera, renderer, controls;
 let perspectiveCamera, orthographicCamera;
 let isCurr2D = false;
-let gridHelper;
 let lastTime = performance.now();
 
 let isSimulating = false;
@@ -16,15 +14,11 @@ let groundSize;
 let shipModel;
 let water;
 
-//Ship values
-let shipRotation = 0;
+// Useful
+
 let shipVelocityVector = new THREE.Vector3();
 let riverVelocityVector = new THREE.Vector3();
-
-
 let world;
-let physicsBodies = [];
-let physicsMeshes = [];
 
 const toggle = document.getElementById('2or3-toggle');
 toggle.checked = false;
@@ -66,17 +60,6 @@ function setupPhysics() {
     world.gravity.set(0, -gravity, 0);
     world.broadphase = new CANNON.NaiveBroadphase();
     world.solver.iterations = 10;
-
-    //const groundShape = CANNON.Plane();
-    //const groundBody = new CANNON.Body({mass: 0});
-    //groundBody.addShape(groundShape);
-    //groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-    //world.addBody(groundBody);
-}
-
-function updatePhysics() {
-    const angDeg = parseFloat(aimAngleInput.value);
-    const rotationInRad = angDeg * Math.PI / 180;
 }
 function createBackground() {
     groundSize = 40;
@@ -111,19 +94,6 @@ function createBackground() {
     const gridHelper = new THREE.GridHelper(groundSize, 20, 0xffffff, 0xffffff);
     gridHelper.position.set(groundSize / 2, 0.2, groundSize / 2);
     scene.add(gridHelper);
-
-    // Water and the sand stuff
-    /**const sandGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
-    const sandMaterial = new THREE.MeshStandardMaterial({
-        color: 0xf8e5a1,
-        roughness: 1.0,
-        map: createGrainTexture(),
-    });
-    const sandMesh = new THREE.Mesh(sandGeometry, sandMaterial);
-    scene.add(sandMesh);
-    sandMesh.rotation.x = -Math.PI / 2;
-    sandMesh.position.set(groundSize / 2, 0, groundSize / 2);
-    **/
     const waterGeometry = new THREE.BoxGeometry(40, 120, 10, 60, 60, 1);
     const waterMaterial = new THREE.MeshStandardMaterial({
         color: 0x0E87CC,
@@ -160,38 +130,12 @@ function createBackground() {
     const foamPositions = foam.geometry.attributes.position.array;
     foam.userData.originalPositions = new Float32Array(foamPositions);
     window.foam = foam;
-
-    /**const waterGeometry = new THREE.PlaneGeometry(20, 50);
-    water = new Water(
-        waterGeometry,
-        {
-            textureWidth: 512,
-            textureHeight: 512,
-            waterNormals: new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg', function (texture) {
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-            }),
-            sunDirection: new THREE.Vector3(0, 20, 0).normalize(),
-            sunColor: 0xffffff,
-            waterColor: 0x0066cc,
-            distortionScale: 2.0,
-        }
-    );
-    scene.add(water);
-    water.rotation.x = -Math.PI / 2;
-    water.position.set(groundSize / 2, 0.1, groundSize / 2);
-    water.material.transparent = false;
-    water.material.uniforms['size'].value = 0.6;
-    water.material.uniforms['distortionScale'].value = 2.0;
-    water.material.uniforms['alpha'].value = 1;
-    **/
 }
 function setupThreeScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x8fdbf7);
     const aspect = window.innerWidth / innerHeight;
     const d = 25;
-    //scene.environment = scene.background;
-
     perspectiveCamera = new THREE.PerspectiveCamera(65, aspect, 0.1, 1000);
     orthographicCamera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 1000);
     camera = orthographicCamera;
@@ -223,19 +167,20 @@ function setupThreeScene() {
         isCurr2D = !is3D;
 
         if (isCurr2D) {
+            camera = orthographicCamera;
+            controls.object = orthographicCamera;
             controls.enablePan = false;
-    controls.enableRotate = false;
-
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.panSpeed = 0.8;
-    controls.minDistance = 5;
-    controls.maxDistance = 40;
-    controls.screenSpacePanning = false;
-    controls.enableKeys = false;
-    camera.position.set(25, 60, 20);
-    camera.up.set(1, 0, 0);
-    controls.target.set(25, 0, 20);
+            controls.enableRotate = false;
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.panSpeed = 0.8;
+            controls.minDistance = 5;
+            controls.maxDistance = 40;
+            controls.screenSpacePanning = false;
+            controls.enableKeys = false;
+            camera.position.set(25, 60, 20);
+            camera.up.set(1, 0, 0);
+            controls.target.set(25, 0, 20);
         } else {
             camera = perspectiveCamera;
             controls.object = perspectiveCamera;
@@ -261,8 +206,6 @@ function setupThreeScene() {
         const aspect = window.innerWidth / window.innerHeight;
         perspectiveCamera.aspect = aspect;
         perspectiveCamera.updateProjectionMatrix();
-
-        // Orthographic camera
         const d = 25;
         orthographicCamera.left = -d * aspect;
         orthographicCamera.right = d * aspect;
@@ -448,7 +391,6 @@ function createEnvironment() {
     const secondSand = sandMesh.clone();
     sandMesh.position.set(groundSize / 0.88, -0.2, groundSize / 2);
     scene.add(secondSand);
-    
 
     const loader = new GLTFLoader();
     loader.load('at_a_beach.glb', function (gltf) {
@@ -465,12 +407,19 @@ function createEnvironment() {
         coco_tree.rotation.y = -Math.PI / 2
         scene.add(coco_tree);
 
-        for(let i = 0; i < 5; i += 1){
-            const dupTree = coco_tree.clone()
+        for (let i = 0; i < 5; i += 1) {
+            // Bottom sand
+            const dupTree = coco_tree.clone();
+            dupTree.position.set(groundSize / (5 + Math.random() * 2), 0, groundSize * Math.random() * 2);
+            scene.add(dupTree);
+        }
+        for (let i = 0; i < 5; i += 1) {
+            // Top sand
+            const dupTree = coco_tree.clone();
+            dupTree.position.set(groundSize + 3, 0, groundSize * Math.random() * 2);
+            scene.add(dupTree);
         }
     });
-
-
 }
 function updateShip() {
     const rotationInRad = parseFloat(aimAngleInput.value) * Math.PI / 180;

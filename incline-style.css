@@ -223,7 +223,7 @@ toggle-in:checked {
     font-weight: bold;
     color: #9Ac;
 }
-.projectile-button{
+.home-button{
     width: 100%;
     padding: 12px;
     margin-top: 10px;
@@ -236,10 +236,10 @@ toggle-in:checked {
     cursor: pointer;
     transition: background 0.3;
 }
-.projectile-button:hover{
+.home-button:hover{
     background: #b5e556;
 }
-.projectile-button:active{
+.home-button:active{
     transform: scale(0.98);
 }
 .sim-button:disabled{
