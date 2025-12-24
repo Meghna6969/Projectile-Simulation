@@ -36,6 +36,7 @@ const velocityRiverSlider = document.getElementById("velocity-river-slider");
 const shipVelocityInput = document.getElementById("velocity-ship");
 const shipVelocitySlider = document.getElementById("velocity-ship-slider");
 const launchSim = document.getElementById("sim-btn");
+const resetSim = document.getElementById("reset-btn");
 
 aimAngleInput.addEventListener('input', (e) => {
     aimAngleSlider.value = e.target.value;
@@ -58,6 +59,7 @@ shipVelocitySlider.addEventListener('input', (e) => {
     shipVelocityInput.value = e.target.value;
 });
 launchSim.addEventListener('click', startSimulation);
+resetSim.addEventListener('click', resetSimulation);
 
 function setupPhysics() {
     world = new CANNON.World();
@@ -170,7 +172,7 @@ function createBackground() {
     });
     const foam = new THREE.Mesh(foamGeometry, foamMaterial);
     foam.rotation.x = -Math.PI / 2;
-    foam.position.set(groundSize / 2, 0.1, groundSize / 2);
+    foam.position.set(groundSize / 2, 0.001, groundSize / 2);
     scene.add(foam);
     const foamPositions = foam.geometry.attributes.position.array;
     foam.userData.originalPositions = new Float32Array(foamPositions);
@@ -299,32 +301,69 @@ function setupLights() {
 }
 function createGrainTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
+    canvas.width = 512;
+    canvas.height = 512;
     const context = canvas.getContext('2d');
-    context.fillStyle = "#ffa974ff";
+    context.fillStyle = "#e8d4b8";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (let i = 0; i < 10000; i++) {
+    const sandColors = ["#f5e6d3", "#d4c4a8", "#e0d0b8", "#c9b89a", "#f0e0ca"];
+
+    for (let i = 0; i < 3000; i++) {
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height;
-        const color = Math.random() > 0.5 ? "#f8e4a1" : "#db9071";
+        const size = Math.random() * 3 + 1;
+        const color = sandColors[Math.floor(Math.random() * sandColors.length)];
         context.fillStyle = color;
-        context.globalAlpha = Math.random() * 0.5;
+        context.globalAlpha = Math.random() * 0.6 + 0.2;
+        context.beginPath();
+        context.arc(x, y, size, 0, Math.PI * 2);
+        context.fill();
+    }
+
+    // fine grain on that
+    for(let i = 0; i < 8000; i++){
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const color = sandColors[Math.floor(Math.random() * sandColors.length)];
+        context.fillStyle = color;
+        context.globalAlpha = Math.random() * 0.4;
         context.fillRect(x, y, 1, 1);
     }
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(20, 20);
+    texture.repeat.set(8, 8);
+    return texture;
+}
+function createSandNormal(){
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    const imageData = context.createImageData(canvas.width, canvas.height);
+
+    for(let i = 0; i < imageData.data.length; i += 4){
+        const noise = Math.random() * 40 +108;
+        imageData.data[i] = noise;
+        imageData.data[i + 1] = noise;
+        imageData.data[i + 2] = 128 + Math.random() * 80;
+        imageData.data[i + 3] = 255;
+    }
+    context.putImageData(imageData, 0, 0);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(8, 8);
     return texture;
 }
 function loadObjects() {
     const loader = new GLTFLoader();
-    loader.load('viking_ship.glb', function (gltf) {
+    loader.load('boat.glb', function (gltf) {
         shipModel = gltf.scene;
-        shipModel.position.set(groundSize / 3.8, 0, groundSize / 2);
-        shipModel.scale.set(0.3, 0.3, 0.3);
+        shipModel.position.set(groundSize / 3.8, 1, groundSize / 2);
+        shipModel.scale.set(0.15, 0.15, 0.15);
         shipModel.rotation.y = -Math.PI / 2
         scene.add(shipModel);
         shipModel
@@ -337,12 +376,16 @@ function animate() {
     lastTime = currTime;
     updatePhysics();
     controls.update();
+
     if (isSimulating && shipModel) {
         const resultantVelocity = new THREE.Vector3();
         resultantVelocity.copy(shipVelocityVector).add(riverVelocityVector);
 
         shipModel.position.x += resultantVelocity.x * deltaTime * 60 * 0.1;
         shipModel.position.z += resultantVelocity.z * deltaTime * 60 * 0.1;
+
+        const actualHeading = Math.atan2(-resultantVelocity.z, resultantVelocity.x);
+        shipModel.rotation.y = actualHeading;
 
         if (shipModel.position.x > groundSize || Math.abs(shipModel.position.z) > groundSize) {
             isSimulating = false;
@@ -353,7 +396,6 @@ function animate() {
             shipVelocityInput.disabled = false;
             shipVelocitySlider.disabled = false;
             launchSim.disabled = false;
-
         }
     }
     if (water && water.userData.originalPositions) {
@@ -367,11 +409,11 @@ function animate() {
             const z = originalPositions[i + 2];
 
             if (originalPositions[i + 2] > 0.4) {
-                const wave1 = Math.sin(x * 0.4 + time * 0.5) * 0.06;
-                const wave2 = Math.cos(x * 0.3 + time * 0.7) * 0.05;
-                const wave3 = Math.sin((x * 0.2 + y * 0.2) + time * 0.4) * 0.04;
-                const wave4 = Math.cos((x * 0.15 - y * 0.15) + time * 0.9) * 0.03;
-                const ripple = Math.sin(x * 0.8 + y * 0.8 + time * 2) * 0.01;
+                const wave1 = Math.sin(x * 0.4 + time * 0.5) * 0.02;
+                const wave2 = Math.cos(x * 0.3 + time * 0.7) * 0.018;
+                const wave3 = Math.sin((x * 0.2 + y * 0.2) + time * 0.4) * 0.015;
+                const wave4 = Math.cos((x * 0.15 - y * 0.15) + time * 0.9) * 0.012;
+                const ripple = Math.sin(x * 0.8 + y * 0.8 + time * 2) * 0.005;
                 positions[i + 2] = originalPositions[i + 2] + wave1 + wave2 + wave3 + wave4 + ripple;
             }
         }
@@ -388,11 +430,11 @@ function animate() {
             const x = originalPositions[i];
             const y = originalPositions[i + 1];
 
-            const foam1 = Math.sin(x * 0.45 + time * 0.6) * 0.07;
-            const foam2 = Math.cos(y * 0.35 + time * 0.8) * 0.06;
-            const foam3 = Math.sin((x * 0.25 + y * 0.2) + time * 0.5) * 0.05;
-            const foam4 = Math.cos((x * 0.18 - y * 0.18) + time * 1.1) * 0.035;
-            const foam5 = Math.sin(x * 0.9 + y * 0.9 + time * 2.2) * 0.012;
+            const foam1 = Math.sin(x * 0.45 + time * 0.6) * 0.025;
+            const foam2 = Math.cos(y * 0.35 + time * 0.8) * 0.022;
+            const foam3 = Math.sin((x * 0.25 + y * 0.2) + time * 0.5) * 0.018;
+            const foam4 = Math.cos((x * 0.18 - y * 0.18) + time * 1.1) * 0.015;
+            const foam5 = Math.sin(x * 0.9 + y * 0.9 + time * 2.2) * 0.006;
 
             positions[i + 2] = foam1 + foam2 + foam3 + foam4 + foam5;
         }
@@ -402,32 +444,24 @@ function animate() {
     renderer.render(scene, camera);
 }
 function createEnvironment() {
-    const loader = new GLTFLoader();
-    const sandMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffa974,
-        roughness: 0.9,
-        metalness: 0.0
+    const sandgeo = new THREE.BoxGeometry(12,2, 40, 60, 60, 1);
+    const sandMat = new THREE.MeshStandardMaterial({
+        color: 0xe8d4b8,
+        map: createGrainTexture(),
+        normalMap: createSandNormal(),
+        normalScale: new THREE.Vector2(0.5, 0.5),
+        roughness: 0.95,
+        metalness: 0.0,
+        roughnessMap: createGrainTexture(),
     });
-    loader.load('sandMap.glb', function (gltf) {
-        const sandMap = gltf.scene;
-        sandMap.traverse((node) => {
-            if (node.isMesh) {
-                node.material = sandMaterial;
-                node.receivedShadow = true;
-                node.castShadow = true;
-            }
-        });
+    const sandMesh = new THREE.Mesh(sandgeo, sandMat);
+    sandMesh.position.set(groundSize / 6.8, -0.2, groundSize / 2);
+    scene.add(sandMesh);
 
-        sandMap.position.set(groundSize / 3.8, 0, groundSize / 2);
-        sandMap.scale.set(2.5, 2.5, 2.5);
-        sandMap.rotation.y = -Math.PI / 2
-        scene.add(sandMap);
-
-        const sandMap2 = sandMap.clone();
-        sandMap2.position.set(groundSize / 1.1, 0, groundSize / 2);
-        sandMap2.rotation.y = sandMap.rotation.y + Math.PI;
-        scene.add(sandMap2);
-    });
+    const secondSand = sandMesh.clone();
+    sandMesh.position.set(groundSize / 1, -0.2, groundSize / 2);
+    scene.add(secondSand);
+    
 }
 function updateShip() {
     const rotationInRad = parseFloat(aimAngleInput.value) * Math.PI / 180;
@@ -444,7 +478,7 @@ function startSimulation() {
     shipVelocitySlider.disabled = true;
     launchSim.disabled = true;
 
-    shipModel.position.set(groundSize / 3.8, 0, groundSize / 2);
+    shipModel.position.set(groundSize / 3.8, 1, groundSize / 2);
     const shipSpeed = parseFloat(shipVelocityInput.value) * 0.4;
     const riverSpeed = parseFloat(velocityRiverInput.value) * 0.4;
     const angleDeg = parseFloat(aimAngleInput.value);
@@ -453,6 +487,17 @@ function startSimulation() {
     shipVelocityVector.set(Math.cos(angleRad) * shipSpeed, 0, -Math.sin(angleRad) * shipSpeed);
     riverVelocityVector.set(0, 0, riverSpeed);
     isSimulating = true;
+}
+function resetSimulation(){
+    aimAngleInput.disabled = false;
+    aimAngleSlider.disabled = false;
+    velocityRiverInput.disabled = false;
+    velocityRiverSlider.disabled = false;
+    shipVelocityInput.disabled = false;
+    shipVelocitySlider.disabled = false;
+    launchSim.disabled = false;
+    isSimulating = false;
+    shipModel.position.set(groundSize / 3.8, 1, groundSize / 2);
 }
 setupPhysics();
 setupThreeScene();

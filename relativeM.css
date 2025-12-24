@@ -166,6 +166,7 @@ section-title{
     white-space: nowrap;
 }
 .reset-button{
+    margin-top: 10px;
     width: 100%;
     padding: 12px;
     background: #f0ba99;
@@ -176,6 +177,12 @@ section-title{
     font-weight: bold;
     cursor: pointer;
     transition: background 0.3s;
+}
+.reset-button:hover{
+    background: #ff7e70;
+}
+.reset-button:active{
+    transform: scale(0.98);
 }
 .sim-button{
     width: 100%;
