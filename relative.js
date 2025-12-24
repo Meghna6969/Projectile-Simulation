@@ -75,11 +75,8 @@ function setupPhysics() {
 }
 
 function updatePhysics() {
-    world.step(1 / 60);
-    for (let i = 0; i < physicsBodies.length; i++) {
-        physicsMeshes[i].position.copy(physicsBodies[i].position);
-        physicsMeshes[i].quaternion.copy(physicsBodies[i].quaternion);
-    }
+    const angDeg = parseFloat(aimAngleInput.value);
+    const rotationInRad = angDeg * Math.PI / 180;
 }
 function createBackground() {
     groundSize = 40;
@@ -115,20 +112,6 @@ function createBackground() {
     gridHelper.position.set(groundSize / 2, 0.2, groundSize / 2);
     scene.add(gridHelper);
 
-    const toggle = document.getElementById('2or3-toggle');
-    toggle.addEventListener('change', (e) => {
-        isCurr2D = e.target.checked === false;
-        if (isCurr2D) {
-            gridHelper.rotation.x = Math.PI / 2;
-            gridHelper.position.set(groundSize / 2, groundSize / 2, 0);
-        }
-        else {
-            gridHelper.rotation.x = 0;
-            gridHelper.position.set(groundSize / 2, 0, groundSize / 2);
-        }
-    });
-
-
     // Water and the sand stuff
     /**const sandGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
     const sandMaterial = new THREE.MeshStandardMaterial({
@@ -141,7 +124,7 @@ function createBackground() {
     sandMesh.rotation.x = -Math.PI / 2;
     sandMesh.position.set(groundSize / 2, 0, groundSize / 2);
     **/
-    const waterGeometry = new THREE.BoxGeometry(40, 40, 10, 60, 60, 1);
+    const waterGeometry = new THREE.BoxGeometry(40, 120, 10, 60, 60, 1);
     const waterMaterial = new THREE.MeshStandardMaterial({
         color: 0x0E87CC,
         emissive: 0x001a33,
@@ -161,7 +144,7 @@ function createBackground() {
     const positions = water.geometry.attributes.position.array;
     water.userData.originalPositions = new Float32Array(positions);
 
-    const foamGeometry = new THREE.PlaneGeometry(30, 40, 60, 60);
+    const foamGeometry = new THREE.PlaneGeometry(30, 120, 60, 60);
     const foamMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         transparent: true,
@@ -217,16 +200,20 @@ function setupThreeScene() {
     document.body.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement);
 
+    controls.enablePan = false;
     controls.enableRotate = false;
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.panSpeed = 0.8;
     controls.minDistance = 5;
-    controls.maxDistance = 50;
-    controls.screenSpacePanning = true;
+    controls.maxDistance = 40;
+    controls.minZoon = 1;
+    controls.maxZoom = 4;
+    controls.screenSpacePanning = false;
     controls.enableKeys = false;
-    camera.position.set(-0.5, 40, 0);
-    controls.target.set(0, 0, 0);
+    camera.position.set(25, 60, 20);
+    camera.up.set(1, 0, 0);
+    controls.target.set(25, 0, 20);
 
     controls.update();
 
@@ -236,32 +223,35 @@ function setupThreeScene() {
         isCurr2D = !is3D;
 
         if (isCurr2D) {
-            camera = orthographicCamera;
-            controls.object = orthographicCamera;
-            controls.enableRotate = false;
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.panSpeed = 0.8;
-            controls.minDistance = 5;
-            controls.maxDistance = 50;
-            controls.screenSpacePanning = true;
-            controls.enableKeys = false;
-            camera.position.set(-0.5, 40, 0);
-            controls.target.set(0, 0, 0);
+            controls.enablePan = false;
+    controls.enableRotate = false;
+
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.panSpeed = 0.8;
+    controls.minDistance = 5;
+    controls.maxDistance = 40;
+    controls.screenSpacePanning = false;
+    controls.enableKeys = false;
+    camera.position.set(25, 60, 20);
+    camera.up.set(1, 0, 0);
+    controls.target.set(25, 0, 20);
         } else {
             camera = perspectiveCamera;
             controls.object = perspectiveCamera;
+            controls.enableRotate = true;
+            controls.enablePan = true;
+            controls.screenSpacePanning = true;
+            camera.up.set(0, 1, 0);
+            camera.position.set(10, 30, 60);
+            controls.target.set(10, 0, 20);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
             controls.rotateSpeed = 0.8;
             controls.panSpeed = 0.8;
             controls.minDistance = 5;
-            controls.maxDistance = 50;
-            controls.maxPolarAngle = Math.PI / 1.5;
-            controls.enableRotate = true;
-            camera.position.set(15, 15, 25);
-            controls.target.set(5, 5, 10);
-            controls.screenSpacePanning = true;
+            controls.maxDistance = 20;
+            controls.maxPolarAngle = Math.PI / 2 - 0.1;
             controls.enableKeys = false;
         }
         controls.update();
@@ -322,7 +312,7 @@ function createGrainTexture() {
     }
 
     // fine grain on that
-    for(let i = 0; i < 8000; i++){
+    for (let i = 0; i < 8000; i++) {
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height;
         const color = sandColors[Math.floor(Math.random() * sandColors.length)];
@@ -336,15 +326,15 @@ function createGrainTexture() {
     texture.repeat.set(8, 8);
     return texture;
 }
-function createSandNormal(){
+function createSandNormal() {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
     const context = canvas.getContext('2d');
     const imageData = context.createImageData(canvas.width, canvas.height);
 
-    for(let i = 0; i < imageData.data.length; i += 4){
-        const noise = Math.random() * 40 +108;
+    for (let i = 0; i < imageData.data.length; i += 4) {
+        const noise = Math.random() * 40 + 108;
         imageData.data[i] = noise;
         imageData.data[i + 1] = noise;
         imageData.data[i + 2] = 128 + Math.random() * 80;
@@ -362,8 +352,8 @@ function loadObjects() {
     const loader = new GLTFLoader();
     loader.load('boat.glb', function (gltf) {
         shipModel = gltf.scene;
-        shipModel.position.set(groundSize / 3.8, 1, groundSize / 2);
-        shipModel.scale.set(0.15, 0.15, 0.15);
+        shipModel.position.set(groundSize / 3.5, 1.3, groundSize / 2);
+        shipModel.scale.set(1.3, 1.3, 1.3);
         shipModel.rotation.y = -Math.PI / 2
         scene.add(shipModel);
         shipModel
@@ -374,7 +364,7 @@ function animate() {
     const currTime = performance.now();
     const deltaTime = (currTime - lastTime) / 1000;
     lastTime = currTime;
-    updatePhysics();
+
     controls.update();
 
     if (isSimulating && shipModel) {
@@ -383,9 +373,6 @@ function animate() {
 
         shipModel.position.x += resultantVelocity.x * deltaTime * 60 * 0.1;
         shipModel.position.z += resultantVelocity.z * deltaTime * 60 * 0.1;
-
-        const actualHeading = Math.atan2(-resultantVelocity.z, resultantVelocity.x);
-        shipModel.rotation.y = actualHeading;
 
         if (shipModel.position.x > groundSize || Math.abs(shipModel.position.z) > groundSize) {
             isSimulating = false;
@@ -444,7 +431,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 function createEnvironment() {
-    const sandgeo = new THREE.BoxGeometry(12,2, 40, 60, 60, 1);
+    const sandgeo = new THREE.BoxGeometry(12, 2, 120, 60, 60, 1);
     const sandMat = new THREE.MeshStandardMaterial({
         color: 0xe8d4b8,
         map: createGrainTexture(),
@@ -459,9 +446,31 @@ function createEnvironment() {
     scene.add(sandMesh);
 
     const secondSand = sandMesh.clone();
-    sandMesh.position.set(groundSize / 1, -0.2, groundSize / 2);
+    sandMesh.position.set(groundSize / 0.88, -0.2, groundSize / 2);
     scene.add(secondSand);
     
+
+    const loader = new GLTFLoader();
+    loader.load('at_a_beach.glb', function (gltf) {
+        const beach = gltf.scene;
+        beach.position.set(groundSize / 5, 0.85, groundSize / 4);
+        beach.scale.set(0.4, 0.4, 0.4);
+        beach.rotation.y = -Math.PI / 2
+        scene.add(beach);
+    });
+    loader.load('coconut_tree.glb', function (gltf) {
+        const coco_tree = gltf.scene;
+        coco_tree.position.set(groundSize / 5, 0, groundSize / 1.3);
+        coco_tree.scale.set(0.05, 0.05, 0.05);
+        coco_tree.rotation.y = -Math.PI / 2
+        scene.add(coco_tree);
+
+        for(let i = 0; i < 5; i += 1){
+            const dupTree = coco_tree.clone()
+        }
+    });
+
+
 }
 function updateShip() {
     const rotationInRad = parseFloat(aimAngleInput.value) * Math.PI / 180;
@@ -470,6 +479,8 @@ function updateShip() {
 function startSimulation() {
     if (!shipModel) return;
     if (isSimulating) return;
+
+    //Disableing the inputs
     aimAngleInput.disabled = true;
     aimAngleSlider.disabled = true;
     velocityRiverInput.disabled = true;
@@ -478,17 +489,19 @@ function startSimulation() {
     shipVelocitySlider.disabled = true;
     launchSim.disabled = true;
 
-    shipModel.position.set(groundSize / 3.8, 1, groundSize / 2);
+    shipModel.position.set(groundSize / 3.5, 1.3, groundSize / 2);
+
     const shipSpeed = parseFloat(shipVelocityInput.value) * 0.4;
     const riverSpeed = parseFloat(velocityRiverInput.value) * 0.4;
+
     const angleDeg = parseFloat(aimAngleInput.value);
     const angleRad = angleDeg * (Math.PI / 180);
 
-    shipVelocityVector.set(Math.cos(angleRad) * shipSpeed, 0, -Math.sin(angleRad) * shipSpeed);
+    shipVelocityVector.set(Math.cos(angleRad) * shipSpeed, 0, Math.sin(angleRad) * shipSpeed);
     riverVelocityVector.set(0, 0, riverSpeed);
     isSimulating = true;
 }
-function resetSimulation(){
+function resetSimulation() {
     aimAngleInput.disabled = false;
     aimAngleSlider.disabled = false;
     velocityRiverInput.disabled = false;
@@ -497,7 +510,7 @@ function resetSimulation(){
     shipVelocitySlider.disabled = false;
     launchSim.disabled = false;
     isSimulating = false;
-    shipModel.position.set(groundSize / 3.8, 1, groundSize / 2);
+    shipModel.position.set(groundSize / 3.5, 1.3, groundSize / 2);
 }
 setupPhysics();
 setupThreeScene();
