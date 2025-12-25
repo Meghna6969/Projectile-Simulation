@@ -295,7 +295,7 @@ function createSandNormal() {
 }
 function loadObjects() {
     const loader = new GLTFLoader();
-    loader.load('boat.glb', function (gltf) {
+    loader.load('assets/boat.glb', function (gltf) {
         shipModel = gltf.scene;
         shipModel.position.set(groundSize / 3.5, 1.3, groundSize / 2);
         shipModel.scale.set(1.3, 1.3, 1.3);
@@ -418,14 +418,14 @@ function createEnvironment() {
     scene.add(secondSand);
 
     const loader = new GLTFLoader();
-    loader.load('at_a_beach.glb', function (gltf) {
+    loader.load('assets/at_a_beach.glb', function (gltf) {
         const beach = gltf.scene;
         beach.position.set(groundSize / 5, 0.85, groundSize / 4);
         beach.scale.set(0.4, 0.4, 0.4);
         beach.rotation.y = -Math.PI / 2
         scene.add(beach);
     });
-    loader.load('coconut_tree.glb', function (gltf) {
+    loader.load('assets/coconut_tree.glb', function (gltf) {
         const coco_tree = gltf.scene;
         coco_tree.position.set(groundSize / 5, 0, groundSize / 1.3);
         coco_tree.scale.set(0.05, 0.05, 0.05);
