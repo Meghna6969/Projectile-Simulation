@@ -159,6 +159,9 @@ function launchSim() {
             material: ballMaterial,
             position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z),
         });
+        if(selectedShape == 'cylinder'){
+            body.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        }
 
         body.userData = {shapeType: selectedShape};
         if (v0 > 0) {
@@ -167,7 +170,7 @@ function launchSim() {
             body.velocity.set(vx, vy, 0);
         }
         body.addEventListener("collide", (e) => {
-            if (!isSimulationFinished && e.body.mass === 0 && e.body !== rampBody) {
+            if (!isSimulationFinished && e.body.mass === 0 && e.body !== rampBody && body.position.y < 1) {
                 isSimulationFinished = true;
                 console.log("Collision with the ground disabling setting the issimulationfinished to true")
                 finalVelocity = body.velocity.length();
@@ -444,9 +447,10 @@ function updateRamp() {
     const centerX = rampBase / 2;
     const centerY = rampHeight / 2 + initHeight;
     const centerZ = rampWidth / 2;
+    rampBody.position.set(centerX, centerY - 0.1, centerZ);
 
-    //rampBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), -angleRad);
-    rampBody.position.set(0, initHeight, 0);
+    rampBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), -angleRad);
+    //rampBody.position.set(0, initHeight, 0);
     world.addBody(rampBody);
 
 }
