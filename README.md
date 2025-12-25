@@ -23,6 +23,9 @@ Three physically accurate physics simulators for analyzing motion and kinematics
         - Kinetic friction
         - Object Mass
     - Drag/Air resistance with accurate drag forces depending on the shape
+- **Relative Motion**
+    - Classic River Problem physics simulation
+    - Play with vectors
 
 ### Libraries Used
     - **THREE.js** (r128): 3D rendering and graphics
