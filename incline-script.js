@@ -1,33 +1,43 @@
+/**
+ * INCLINE BODY KINEMATICS
+ * Libraries: THREE.js + CANNON.js (Rigid body Physics)
+ */
+
 // Changed imports up for more convenience
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 let scene, camera, renderer, controls;
 let perspectiveCamera, orthographicCamera;
-let isCurr2D = false;
+let isCurr2D = false; // Keeps track of the view
 let ramp; // Visual 3D Three js object
 let rampBody; // CANNON.js physics object
 
-let isSimulationFinished = true; // initially there is no simulation so true
-let frozenTime = 0;
-let gravity = 9.82;
-let mass = 2;
-let finalVelocity = 0;
+const SHAPE_PROPERTIES = {
+    sphere: {cd: 0.47, areaFactor: (r) => Math.PI * r * r},
+    cube: {cd:1.05, areaFactor: (r) => 4 * r * r},
+    cylinder: {cd: 0.82, areaFactor: (r) => 2 * r * r},
+    cone: {cd: 0.50, areaFactor: (r) => Math.PI * r * r}
+};
 
+let isSimulationFinished = true; // initially there is no simulation so true
+let frozenTime = 0; // Keeps track of time when the object leaves the ramp
+let gravity = 9.82; // Inital and final gravity; Cant be changed with the sliders 
+let finalVelocity = 0; // Keeps track of final velocity of the object
+
+// Physics variables with air resistance
 let airResistent = false;
 const AIR_DENSITY = 1.225;
 const DRAG_COEFFICIENT = 0.47;
 let ballMaterial, rampMaterial;
 
+// CANNON.js objects
 let world;
 let physicsBodies = [];
 let physicsMeshes = [];
-
 // Ramp settings
-const inclineAngle = 0;
-const L = 5  //5 meters to initialize
 const toggle = document.getElementById('2or3-toggle');
-toggle.checked = false;
+toggle.checked = false; // Initally 2d
 
 const velocityInput = document.getElementById('initial-velocity');
 const velocitySlider = document.getElementById('velocity-slider');
@@ -40,13 +50,12 @@ const massSlider = document.getElementById('mass-slider');
 const airResistentInput = document.getElementById('airResistence');
 const rampDistanceInput = document.getElementById('ramp-distance');
 const rampDistanceSlider = document.getElementById('distance-slider');
-
 const rampHeightInput = document.getElementById('initial-height');
 const rampHeightSlider = document.getElementById('height-slider');
-
 const simulationButton = document.getElementById('sim-btn');
-simulationButton.addEventListener('click', launchSim);
 
+// Binding all the methods and sliders to the inputs so they have the same values
+simulationButton.addEventListener('click', launchSim);
 rampHeightInput.addEventListener('input', (e) => {
     rampHeightSlider.value = e.target.value;
     updateRamp();
@@ -55,14 +64,12 @@ rampHeightSlider.addEventListener('input', (e) => {
     rampHeightInput.value = e.target.value;
     updateRamp();
 });
-
 velocitySlider.addEventListener('input', (e) => {
     velocityInput.value = e.target.value;
 });
 velocityInput.addEventListener('input', (e) => {
     velocitySlider.value = e.target.value;
 });
- 
 rampAngleSlider.addEventListener('input', (e) => {
     rampAngleInput.value = e.target.value;
     updateRamp();
@@ -71,7 +78,6 @@ rampAngleInput.addEventListener('input', (e) => {
     rampAngleSlider.value = e.target.value;
     updateRamp();
 });
-
 rampDistanceSlider.addEventListener('input', (e) => {
     rampDistanceInput.value = e.target.value;
     updateRamp();
@@ -80,8 +86,6 @@ rampDistanceInput.addEventListener('input', (e) => {
     rampDistanceSlider.value = e.target.value;
     updateRamp();
 });
-
-
 kineticFrictionSlider.addEventListener('input', (e) => {
     kineticFriction.value = e.target.value;
     updateRamp();
@@ -90,7 +94,6 @@ kineticFriction.addEventListener('input', (e) => {
     kineticFrictionSlider.value = e.target.value;
     updateRamp();
 });
-
 massSlider.addEventListener('input', (e) => {
     massInput.value = e.target.value;
 });
@@ -98,6 +101,7 @@ massInput.addEventListener('input', (e) => {
     massSlider.value = e.target.value;
 });
 
+// Console logs so that users can make sure if air resistence is on if nothing changes visually
 airResistentInput.addEventListener('input', (e) => {
     airResistent = e.target.checked;
     if (airResistent) {
@@ -108,14 +112,19 @@ airResistentInput.addEventListener('input', (e) => {
     }
 });
 
+// Launch Physics
 function launchSim() {
-    console.log("isSimulationFinished =" + isSimulationFinished);
+    
     if (isSimulationFinished) {
+        // Current shape
+        const shapeDropdown = document.getElementById('shape');
+        const selectedShape = shapeDropdown.value;
         world.time = 0;
         finalVelocity = 0;
         isSimulationFinished = false;
         frozenTime = 0;
 
+        // All object variables
         const v0 = parseFloat(velocityInput.value);
         const angle = parseFloat(rampAngleInput.value);
         const initRampHeight = parseFloat(rampHeightInput.value);
@@ -131,15 +140,24 @@ function launchSim() {
         // Make the projectile
         const radius = 0.5 * mass * 0.1;
         const startPos = new THREE.Vector3(0.1, rampHeight + radius + initRampHeight + 0.2, 2);
-        const shape = new CANNON.Sphere(radius);
+        let cannonShape;
+        switch(selectedShape){
+            case 'cube':
+                cannonShape = new CANNON.Box(new CANNON.Vec3(radius, radius, radius));
+                break;
+            case 'cylinder':
+                cannonShape = new CANNON.Cylinder(radius, radius, radius * 2, 16);
+                break;
+            default:
+                cannonShape = new CANNON.Sphere(radius);
+        }
         const body = new CANNON.Body({
             mass: mass,
-            shape: shape,
+            shape: cannonShape,
             material: ballMaterial,
-            linearDamping: 0.05, //small damping for stability
-            angularDamping: 0,
             position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z)
         });
+        body.userData = {shapeType: selectedShape};
         if (v0 > 0) {
             const vx = v0 * Math.cos(angleInRad);
             const vy = -v0 * Math.sin(angleInRad);
@@ -155,18 +173,27 @@ function launchSim() {
         })
         world.addBody(body);
         physicsBodies.push(body);
-        const geometry = new THREE.SphereGeometry(radius, 32, 32);
-        const material = new THREE.MeshStandardMaterial({ color: 0xffff00 });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.copy(body.position);
 
+        let geometry;
+        switch(selectedShape){
+            case 'cube':
+                geometry = new THREE.BoxGeometry(radius * 2, radius * 2, radius * 2);
+                break;
+            case 'cylinder':
+                geometry = new THREE.CylinderGeometry(radius, radius, radius * 2, 32);
+                break;
+            default:
+                geometry = new THREE.SphereGeometry(radius, 32, 32);
+        }
+        const material = new THREE.MeshStandardMaterial({color: 0xffff00 });
+        const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
         physicsMeshes.push(mesh);
     }
     else {
         // do nothing
         // grey out the start simulation button
-        console.log("AHAHAHAH IN THE ELSE HERE");
+        console.log("AHAHAHAH THE PROGRAM IS IN THE ELSE STATEMENT");
         simulationButton.disabled = true;
     }
 
@@ -189,7 +216,7 @@ function setupPhysics() {
     world.solver.iterations = 10;
 
     const groundShape = new CANNON.Plane();
-    const groundBody = new CANNON.Body({ mass: 0 }); // static
+    const groundBody = new CANNON.Body({ mass: 0 });
     groundBody.addShape(groundShape);
     groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
     world.addBody(groundBody);
@@ -445,16 +472,21 @@ function updatePhysics() {
     }
 }
 function applyDragForce(body) {
-    if (!airResistent) return;
+    if (!airResistent || !body.userData) return;
     const velocity = body.velocity;
     const speed = velocity.length();
 
     if (speed > 0.01) {
-        const radius = body.shapes[0].radius;
-        const area = Math.PI * radius * radius;
-        const dragMagnitude = 0.5 * AIR_DENSITY * speed * speed * DRAG_COEFFICIENT * area;
+        const shapeType = body.userData.shapeType;
+        const props = SHAPE_PROPERTIES[shapeType];
+        const r = 0.5 * body.mass * 0.1;
+        const area = props.areaFactor(r);
+        const cd = props.cd;
+
+        const dragMagnitude = 0.5 * AIR_DENSITY * speed * speed * cd * area;
         const dragForce = velocity.unit().scale(-dragMagnitude);
         body.applyForce(dragForce, body.position);
+
     }
 }
 function animate() {
