@@ -16,8 +16,7 @@ let rampBody; // CANNON.js physics object
 const SHAPE_PROPERTIES = {
     sphere: {cd: 0.47, areaFactor: (r) => Math.PI * r * r},
     cube: {cd:1.05, areaFactor: (r) => 4 * r * r},
-    cylinder: {cd: 0.82, areaFactor: (r) => 2 * r * r},
-    cone: {cd: 0.50, areaFactor: (r) => Math.PI * r * r}
+    cylinder: {cd: 0.82, areaFactor: (r) => 2 * r * r}
 };
 
 let isSimulationFinished = true; // initially there is no simulation so true
@@ -139,24 +138,28 @@ function launchSim() {
         }
         // Make the projectile
         const radius = 0.5 * mass * 0.1;
-        const startPos = new THREE.Vector3(0.1, rampHeight + radius + initRampHeight + 0.2, 2);
+        const startPos = new THREE.Vector3(0.5, rampHeight + radius + initRampHeight + 0.2, 2);
         let cannonShape;
         switch(selectedShape){
             case 'cube':
+                console.log(selectedShape);
                 cannonShape = new CANNON.Box(new CANNON.Vec3(radius, radius, radius));
                 break;
             case 'cylinder':
+                console.log(selectedShape);
                 cannonShape = new CANNON.Cylinder(radius, radius, radius * 2, 16);
                 break;
             default:
+                console.log(selectedShape);
                 cannonShape = new CANNON.Sphere(radius);
         }
         const body = new CANNON.Body({
             mass: mass,
             shape: cannonShape,
             material: ballMaterial,
-            position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z)
+            position: new CANNON.Vec3(startPos.x, startPos.y, startPos.z),
         });
+
         body.userData = {shapeType: selectedShape};
         if (v0 > 0) {
             const vx = v0 * Math.cos(angleInRad);
@@ -384,6 +387,7 @@ function updateRamp() {
     const rampHeight = Math.sin(angleRad) * L;
     const rampWidth = 4;
 
+    // THREE.js visuals
     const shape = new THREE.Shape();
     shape.moveTo(0, 0);
     shape.lineTo(rampBase, 0);
@@ -401,19 +405,48 @@ function updateRamp() {
     ramp.position.set(0, initHeight, 0);
     scene.add(ramp);
 
+    // Now for the physics part with CANNON.js
     if (rampBody) {
         world.removeBody(rampBody);
     }
-    const vertices = geometry.attributes.position.array;
-    const indices = [];
-    for (let i = 0; i < vertices.length / 3; i++) {
+
+    // Sad part apparently trimeshes have problems with collions of anything except sphere
+    // doing convex polyhedren
+    /*const vertices = [
+        new CANNON.Vec3(0, 0, 0),              // v0
+        new CANNON.Vec3(rampBase, 0, 0),       // v1
+        new CANNON.Vec3(0, rampHeight, 0),     // v2
+        new CANNON.Vec3(0, 0, rampWidth),      // v3
+        new CANNON.Vec3(rampBase, 0, rampWidth),   // v4
+        new CANNON.Vec3(0, rampHeight, rampWidth)  // v5
+    ];*/
+    //const vertices = geometry.attributes.position.array;
+    //const indices = [];
+    /*for (let i = 0; i < vertices.length / 3; i++) {
         indices.push(i);
     }
-    const cannonShape = new CANNON.Trimesh(vertices, indices);
+   const faces = [
+    [0, 2, 1],
+    [3, 4, 5],
+    [0, 1, 4, 3],
+    [0, 3, 5, 2],
+    [1, 2, 5, 4]
+   ];*/
+    //const cannonShape = new CANNON.Trimesh(vertices, indices);
+    const boxLength = L;
+    const boxThickness = 0.2;
+    const boxWidth = rampWidth;
+
+    const cannonShape = new CANNON.Box(new CANNON.Vec3(boxLength / 2, boxThickness / 2, boxWidth / 2));
     rampBody = new CANNON.Body({ mass: 0, material: rampMaterial });
     rampBody.addShape(cannonShape);
 
-    rampBody.position.set(ramp.position.x, ramp.position.y, ramp.position.z);
+    const centerX = rampBase / 2;
+    const centerY = rampHeight / 2 + initHeight;
+    const centerZ = rampWidth / 2;
+
+    //rampBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), -angleRad);
+    rampBody.position.set(0, initHeight, 0);
     world.addBody(rampBody);
 
 }
