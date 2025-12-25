@@ -1,11 +1,10 @@
+// Changed imports up for more convenience
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-const { ExtrudeGeometry, Shape, Vector2 } = THREE;
 
 let scene, camera, renderer, controls;
 let perspectiveCamera, orthographicCamera;
 let isCurr2D = false;
-let gridHelper;
 let ramp; // Visual 3D Three js object
 let rampBody; // CANNON.js physics object
 

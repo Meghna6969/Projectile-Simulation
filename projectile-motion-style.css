@@ -2,11 +2,13 @@ body {
     margin: 0;
     font-family: Arial, Helvetica, sans-serif;
 }
-canvas{
+
+canvas {
     display: block;
 }
-.slider{
-    -webkit-appearance: none;
+
+.slider {
+    -webkit-appearance: none; /* Important so that the default slider theme is gone*/
     flex: 1;
     margin-top: 0;
     height: 6px;
@@ -15,7 +17,8 @@ canvas{
     outline: none;
     cursor: pointer;
 }
-.slider::-webkit-slider-thumb{
+
+.slider::-webkit-slider-thumb {
     appearance: none;
     width: 18px;
     height: 18px;
@@ -23,7 +26,8 @@ canvas{
     background: #9Ac;
     cursor: pointer;
 }
-.slider::-moz-range-thumb{
+
+.slider::-moz-range-thumb {
     width: 18px;
     height: 18px;
     border-radius: 50%;
@@ -31,7 +35,8 @@ canvas{
     cursor: pointer;
     border: none;
 }
-.control-panel{
+
+.control-panel {
     position: absolute;
     top: 20px;
     left: 20px;
@@ -39,47 +44,54 @@ canvas{
     background: rgba(3, 3, 5, 0.95);
     padding: 20px;
     border-radius: 12px;
-    color:white;
-    width:280px;
+    color: white;
+    width: 280px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
-.panel-header{
+
+.panel-header {
     margin-bottom: 20px;
 }
-.panel-header h2{
+
+.panel-header h2 {
     margin: 0 0 8px 0;
     font-size: 20px;
     color: #9Ac;
 }
+
 .panel-header p {
     margin: 0;
     font-size: 13px;
     color: #a39ce3;
     line-height: 1.4;
 }
-.control-section{
+
+.control-section {
     margin-bottom: 20px;
     padding-bottom: 20px;
     border-bottom: 1px solid rgba(163, 156, 227, 0.3);
 }
-.control-section:last-child{
+
+.control-section:last-child {
     border-bottom: none;
     margin-bottom: 0;
     padding-bottom: 0;
 }
-section-title{
+
+.section-title {
     font-size: 14px;
     font-weight: bold;
     margin-bottom: 12px;
     color: #a39ce3;
 }
 
-.toggle-container{
+.toggle-container {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 15px;
 }
+
 .toggle-in {
     appearance: none;
     width: 50px;
@@ -90,11 +102,12 @@ section-title{
     cursor: pointer;
     transition: background 0.3s;
 }
+
 toggle-in:checked {
     background: #9Ac;
 }
 
-.toggle-in::before{
+.toggle-in::before {
     content: '';
     position: absolute;
     width: 22px;
@@ -105,29 +118,35 @@ toggle-in:checked {
     left: 2px;
     transition: transform 0.3s;
 }
-.toggle-in:checked::before{
+
+.toggle-in:checked::before {
     transform: translateX(24px);
 }
-.toggle-label{
+
+.toggle-label {
     user-select: none;
     font-size: 14px;
     cursor: pointer;
 }
+
 .input-group {
     margin-bottom: 15px;
 }
-.input-group label{
+
+.input-group label {
     display: block;
     font-size: 13px;
     font-weight: bold;
-    margin-bottom:6px;
+    margin-bottom: 6px;
     color: #a39ce3;
 }
-.input-controls{
+
+.input-controls {
     display: flex;
     align-items: center;
     gap: 10px;
 }
+
 .input-group input {
     width: 100%;
     padding: 8px;
@@ -139,36 +158,42 @@ toggle-in:checked {
     font-size: 14px;
     box-sizing: border-box;
 }
-.input-group input:focus{
-    outline:none;
+
+.input-group input:focus {
+    outline: none;
     border-color: #9Acd;
 }
-.input-with-unit{
+
+.input-with-unit {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 80px;
 }
+
 .input-group input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
 .input-with-unit input {
     width: 60px;
     padding: 6px 8px;
     border: 1px solid #434081;
     border-radius: 6px;
-    background:rgba(67, 64, 129, 0.3);
-    color:white;
+    background: rgba(67, 64, 129, 0.3);
+    color: white;
     font-weight: bold;
     font-size: 14px;
     box-sizing: border-box;
 }
+
 .input-with-unit span {
     font-size: 13px;
     color: #a39ce3;
     white-space: nowrap;
 }
+
 .shoot-button {
     width: 100%;
     padding: 12px;
@@ -181,36 +206,42 @@ toggle-in:checked {
     cursor: pointer;
     transition: background 0.3s;
 }
-.shoot-button:hover{
+
+.shoot-button:hover {
     background: #b5e556;
 }
-.shoot-button:active{
+
+.shoot-button:active {
     transform: scale(0.98);
 }
+
 .details-panel {
     position: absolute;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
-    background: rbga(3, 3, 5, 0.95);
+    background: rgba(3, 3, 5, 0.95);
     padding: 20px;
     border-radius: 12px;
     color: white;
     min-width: 600px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
-.details-header{
+
+.details-header {
     display: flex;
-    gap:30px;
+    gap: 30px;
     margin-bottom: 15px;
     padding-bottom: 15px;
     border-bottom: 1px solid rgba(163. 156, 227, 0.3);
 }
-.detail-item{
+
+.detail-item {
     flex: 1;
 }
-.detail-item label{
+
+.detail-item label {
     display: block;
     font-size: 11px;
     color: #a39ce3;
@@ -218,22 +249,26 @@ toggle-in:checked {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
 .detail-item span {
     display: block;
     font-size: 18px;
     font-weight: bold;
     color: #9Ac;
 }
-.data-table{
+
+.data-table {
     max-height: 150px;
     overflow-y: auto;
 }
-.data-table table{
+
+.data-table table {
     width: 100%;
     border-collapse: collapse;
     font-size: 12px;
 }
-.data-table th{
+
+.data-table th {
     background: rgba(67, 64, 129, 0.5);
     padding: 8px;
     text-align: left;
@@ -242,34 +277,42 @@ toggle-in:checked {
     position: sticky;
     top: 0;
 }
-.data-table td{
+
+.data-table td {
     padding: 6px 8px;
     border-bottom: 1px solid rgba(163, 156, 227, 0.2);
 }
+
 .data-table tr:hover {
     background: rgba(67, 64, 129, 0.3);
 }
-.data-table::-webkit-scrollbar{
+
+.data-table::-webkit-scrollbar {
     width: 6px;
 }
+
 .data-table::-webkit-scrollbar-track {
     background: rgba(67, 64, 129, 0.3);
     border-radius: 3px;
 }
-.data-table::-webkit-scrollbar-thumb{
+
+.data-table::-webkit-scrollbar-thumb {
     background: #9Ac;
     border-radius: 3px;
 }
-.air-resistence-input{
+
+.air-resistence-input {
     display: flex;
     justify-content: center;
     gap: 20px;
 }
-.air-resistence-input input{
+
+.air-resistence-input input {
     width: 30px;
     height: 30px;
 }
-.home-button{
+
+.home-button {
     width: 100%;
     padding: 12px;
     margin-top: 10px;
@@ -282,9 +325,11 @@ toggle-in:checked {
     cursor: pointer;
     transition: background 0.3;
 }
-.home-button:hover{
+
+.home-button:hover {
     background: #b5e;
 }
-.home-button:active{
+
+.home-button:active {
     transform: scale(0.98);
 }
